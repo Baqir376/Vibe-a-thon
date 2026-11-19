@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { Inter, Inter_Tight, JetBrains_Mono } from "next/font/google";
+import { Caveat, Fraunces, Instrument_Sans, JetBrains_Mono } from "next/font/google";
 import { Cursor } from "@/components/fx/Cursor";
 import "./globals.css";
 
-const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
-// SF Pro is not licensed for non-Apple sites; Inter Tight is the closest legal match for the display face.
-const display = Inter_Tight({ variable: "--font-inter-tight", subsets: ["latin"], weight: ["500", "600", "700", "800"] });
+const sans = Instrument_Sans({ variable: "--font-instrument", subsets: ["latin"] });
+// "Cajal's notebook": a characterful serif for headlines, a hand for margin notes.
+const display = Fraunces({ variable: "--font-fraunces", subsets: ["latin"], axes: ["SOFT", "WONK", "opsz"] });
+const hand = Caveat({ variable: "--font-caveat", subsets: ["latin"] });
 const jetbrains = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["latin"] });
 
 export const metadata: Metadata = {
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${inter.variable} ${display.variable} ${jetbrains.variable} h-full antialiased`}>
+    <html lang="en" className={`${sans.variable} ${display.variable} ${hand.variable} ${jetbrains.variable} h-full antialiased`}>
       <body className="grain min-h-full">
         <Cursor />
         {children}

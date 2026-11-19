@@ -6,7 +6,7 @@ import { approve } from "@/lib/api";
 import type { Approval, ConsoleState, Line, Phase, Toast, Tone } from "@/lib/useConsole";
 
 export const TONE: Record<Tone, string> = {
-  violet: "#a78bfa", live: "#6ef2c0", read: "#38d6f5", write: "#ffb547", drift: "#ffd84d", danger: "#ff6b81", muted: "#8392b0",
+  violet: "#ff7a45", live: "#8fd18a", read: "#7d95ff", write: "#f2c14e", drift: "#ffd166", danger: "#ff6b57", muted: "#a39887",
 };
 const PHASE_TONE: Record<Phase, Tone> = {
   offline: "danger", idle: "live", thinking: "violet", searching: "read", building: "violet", calling: "read",
@@ -19,7 +19,7 @@ export function StatusIsland({ phase, status }: { phase: Phase; status: string }
   const busy = !["idle", "done", "offline", "error"].includes(phase);
   return (
     <motion.div layout transition={{ type: "spring", stiffness: 380, damping: 32 }}
-      className="flex items-center gap-3 overflow-hidden rounded-full border bg-[#070b16]/90 px-4 py-2 shadow-[0_10px_40px_rgba(0,0,0,.5)] backdrop-blur"
+      className="flex items-center gap-3 overflow-hidden rounded-full border bg-[#120f0b]/90 px-4 py-2 shadow-[0_10px_40px_rgba(0,0,0,.5)] backdrop-blur"
       style={{ borderColor: c + "55" }}>
       <motion.span layout className="relative flex h-2.5 w-2.5 shrink-0">
         {busy && <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-70" style={{ background: c }} />}
@@ -40,7 +40,7 @@ export function LiveCounter({ live, total }: { live: number; total: number }) {
   return (
     <div>
       <div className="font-display text-6xl leading-none font-bold tracking-tight">
-        <span className={live ? "text-live drop-shadow-[0_0_18px_rgba(110,242,192,.5)]" : "text-text"}>{v}</span>
+        <span className={live ? "text-live drop-shadow-[0_0_18px_rgba(143,209,138,.5)]" : "text-text"}>{v}</span>
         <span className="text-2xl text-muted"> / {total}</span>
       </div>
       <p className="mt-1 text-[11px] tracking-[0.22em] text-muted uppercase">live tools</p>
@@ -118,7 +118,7 @@ export function Timeline({ lines }: { lines: Line[] }) {
             transition={{ type: "spring", stiffness: 420, damping: 34 }} className="flex gap-2.5 overflow-hidden py-0.5">
             <span className="w-4 shrink-0 text-center font-mono text-xs" style={{ color: TONE[l.tone] }}>{l.icon}</span>
             <div className="min-w-0">
-              <p className="truncate font-mono text-[12px]" style={{ color: l.tone === "muted" ? "#8392b0" : "#e8eefb" }}>{l.text}</p>
+              <p className="truncate font-mono text-[12px]" style={{ color: l.tone === "muted" ? "#a39887" : "#f1eadc" }}>{l.text}</p>
               {l.detail && <p className="truncate font-mono text-[10.5px] text-muted">{l.detail}</p>}
             </div>
           </motion.div>
@@ -133,11 +133,11 @@ export function ApprovalSheet({ approvals }: { approvals: Approval[] }) {
   return (
     <AnimatePresence>
       {a && (
-        <motion.div key={a.id} className="fixed inset-0 z-50 flex items-center justify-center bg-[#03050b]/70 backdrop-blur-sm"
+        <motion.div key={a.id} className="fixed inset-0 z-50 flex items-center justify-center bg-[#0b0907]/70 backdrop-blur-sm"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
           <motion.div initial={{ scale: 0.9, y: 30, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
             transition={{ type: "spring", stiffness: 300, damping: 24 }}
-            className="w-[460px] max-w-[92vw] rounded-3xl border border-write/40 bg-panel p-6 shadow-[0_0_80px_rgba(255,181,71,.18)]">
+            className="w-[460px] max-w-[92vw] rounded-3xl border border-write/40 bg-panel p-6 shadow-[0_0_80px_rgba(242,193,78,.18)]">
             <div className="flex items-center gap-3">
               <motion.span animate={{ scale: [1, 1.15, 1] }} transition={{ repeat: Infinity, duration: 1.6 }}
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-write/15 text-write">⚠</motion.span>

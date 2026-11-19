@@ -25,26 +25,26 @@ export function HowItWorks() {
       <div className="sticky top-0 flex h-screen items-center overflow-hidden">
         <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-5 lg:grid-cols-2">
           <div>
-            <p className="mb-3 font-mono text-xs tracking-[0.3em] text-violet uppercase">How it works</p>
-            <h2 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">Just-in-time tools,<br /><span className="text-muted">not pre-wired ones.</span></h2>
+            <p className="mb-3 font-mono text-xs tracking-[0.3em] text-signal uppercase">How it works</p>
+            <h2 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">Just-in-time tools,<br /><span className="text-graphite">not pre-wired ones.</span></h2>
             <div className="relative mt-10 space-y-2">
               <div className="absolute top-2 bottom-2 left-[19px] w-px bg-line" />
               <motion.div className="absolute top-2 left-[19px] w-px origin-top bg-gradient-to-b from-violet to-live"
                 style={{ height: "calc(100% - 16px)", scaleY: scrollYProgress }} />
               {STEPS.map((s, i) => (
                 <motion.div key={s.k} animate={{ opacity: i === step ? 1 : 0.38 }} className="relative flex gap-5 py-3">
-                  <motion.div animate={{ backgroundColor: i <= step ? "#a78bfa" : "#0e1526", borderColor: i <= step ? "#a78bfa" : "#1b2640", scale: i === step ? 1.08 : 1 }}
+                  <motion.div animate={{ backgroundColor: i <= step ? "#e8551f" : "#ebe4d5", borderColor: i <= step ? "#e8551f" : "#d6ccb8", scale: i === step ? 1.08 : 1 }}
                     className="z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border font-mono text-xs font-semibold"
-                    style={{ color: i <= step ? "#160d33" : "#8392b0" }}>{s.k}</motion.div>
+                    style={{ color: i <= step ? "#ffffff" : "#5f574c" }}>{s.k}</motion.div>
                   <div>
                     <div className="flex flex-wrap items-baseline gap-3">
                       <h3 className="font-display text-xl font-semibold">{s.title}</h3>
-                      <code className="rounded bg-panel px-1.5 py-0.5 font-mono text-[11px] text-violet">{s.cmd}</code>
+                      <code className="rounded bg-paper-2 px-1.5 py-0.5 font-mono text-[11px] text-signal">{s.cmd}</code>
                     </div>
                     <AnimatePresence initial={false}>
                       {i === step && (
                         <motion.p initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                          className="mt-2 max-w-md overflow-hidden text-[15px] leading-relaxed text-muted">{s.body}</motion.p>
+                          className="mt-2 max-w-md overflow-hidden text-[15px] leading-relaxed text-graphite">{s.body}</motion.p>
                       )}
                     </AnimatePresence>
                   </div>
@@ -75,14 +75,14 @@ function curve(ax: number, ay: number, sx: number, sy: number, ex: number, ey: n
 function StepVisual({ step }: { step: number }) {
   const live = step === 1 || step === 2;
   return (
-    <div className="glass relative aspect-[5/4] overflow-hidden rounded-3xl">
-      <div className="dot-grid absolute inset-0 opacity-60" />
+    <div className="card-paper relative aspect-[5/4] overflow-hidden rounded-3xl">
+      <div className="graph-paper absolute inset-0 opacity-60" />
       <svg viewBox="0 0 520 420" className="relative h-full w-full">
         {SYS.map((s) => (
           <g key={s.name}>
-            <line x1={AGENT.x} y1={AGENT.y} x2={s.x} y2={s.y} stroke="#1b2640" strokeDasharray="3 6" />
+            <line x1={AGENT.x} y1={AGENT.y} x2={s.x} y2={s.y} stroke="#d6ccb8" strokeDasharray="3 6" />
             {s.eps.map(([x, y], j) => (
-              <line key={j} x1={s.x} y1={s.y} x2={x} y2={y} stroke="#1c2a47" />
+              <line key={j} x1={s.x} y1={s.y} x2={x} y2={y} stroke="#cfc4ad" />
             ))}
           </g>
         ))}
@@ -96,7 +96,7 @@ function StepVisual({ step }: { step: number }) {
         </AnimatePresence>
         <defs>
           <linearGradient id="sweep" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#38d6f5" stopOpacity="0" /><stop offset=".5" stopColor="#38d6f5" stopOpacity=".18" /><stop offset="1" stopColor="#38d6f5" stopOpacity="0" />
+            <stop offset="0" stopColor="#2346d8" stopOpacity="0" /><stop offset=".5" stopColor="#2346d8" stopOpacity=".18" /><stop offset="1" stopColor="#2346d8" stopOpacity="0" />
           </linearGradient>
           <filter id="glow2"><feGaussianBlur stdDeviation="3" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
         </defs>
@@ -108,11 +108,11 @@ function StepVisual({ step }: { step: number }) {
             <g key={k}>
               {/* solid stroke draws itself in (pathLength owns the dasharray) */}
               <motion.path d={d} fill="none" strokeWidth={2.2} filter="url(#glow2)"
-                animate={{ pathLength: step >= 1 ? 1 : 0, stroke: step === 3 ? "#3a4a6b" : "#6ef2c0", opacity: step >= 1 ? (step === 3 ? 0.35 : 0.9) : 0 }}
+                animate={{ pathLength: step >= 1 ? 1 : 0, stroke: step === 3 ? "#a39887" : "#e8551f", opacity: step >= 1 ? (step === 3 ? 0.35 : 0.9) : 0 }}
                 transition={{ duration: 0.8, delay: step === 1 ? k * 0.18 : 0 }} />
               {/* separate dashed overlay carries the flowing-signal effect */}
               <motion.path d={d} fill="none" strokeWidth={step === 3 ? 1.4 : 2.4} strokeDasharray={step === 3 ? "3 6" : "6 10"}
-                className={live ? "link-flow" : ""} animate={{ opacity: step >= 1 ? 1 : 0, stroke: step === 3 ? "#3a4a6b" : "#d9fff1" }}
+                className={live ? "link-flow" : ""} animate={{ opacity: step >= 1 ? 1 : 0, stroke: step === 3 ? "#a39887" : "#ffffff" }}
                 transition={{ duration: 0.4, delay: step === 1 ? 0.6 + k * 0.18 : 0 }} />
               {step === 2 && (
                 <motion.circle r={4.5} fill="#fff" filter="url(#glow2)"
@@ -129,24 +129,24 @@ function StepVisual({ step }: { step: number }) {
           const on = picked && step >= 1 && step <= 2;
           return (
             <motion.circle key={`${si}-${j}`} cx={x} cy={y}
-              animate={{ r: on ? 7 : 5, fill: on ? "#6ef2c0" : picked && step === 0 ? "#38d6f5" : picked && step === 3 ? "rgba(0,0,0,0)" : "#2a3b60",
-                         stroke: picked && step === 3 ? "#3a4a6b" : "rgba(0,0,0,0)" }}
+              animate={{ r: on ? 7 : 5, fill: on ? "#e8551f" : picked && step === 0 ? "#2346d8" : picked && step === 3 ? "rgba(0,0,0,0)" : "#cfc4ad",
+                         stroke: picked && step === 3 ? "#a39887" : "rgba(0,0,0,0)" }}
               strokeWidth={1.6} transition={{ type: "spring", stiffness: 260, damping: 18 }} />
           );
         }))}
         {/* systems */}
         {SYS.map((s) => (
           <g key={s.name}>
-            <motion.circle cx={s.x} cy={s.y} r={26} fill="#101a30" stroke="#2b3d63"
-              animate={step === 1 ? { stroke: ["#2b3d63", "#a78bfa", "#2b3d63"] } : {}} transition={{ duration: 1, repeat: step === 1 ? Infinity : 0 }} />
-            <text x={s.x} y={s.y + 4} textAnchor="middle" className="fill-text font-sans text-[11px] font-semibold">{s.name}</text>
+            <motion.circle cx={s.x} cy={s.y} r={26} fill="#f8f4ec" stroke="#16130f"
+              animate={step === 1 ? { stroke: ["#16130f", "#e8551f", "#16130f"] } : {}} transition={{ duration: 1, repeat: step === 1 ? Infinity : 0 }} />
+            <text x={s.x} y={s.y + 4} textAnchor="middle" className="fill-carbon font-sans text-[11px] font-semibold">{s.name}</text>
           </g>
         ))}
         {/* agent */}
-        <motion.circle cx={AGENT.x} cy={AGENT.y} r={46} fill="#7c3aed" opacity={0.25} animate={{ r: [44, 52, 44] }} transition={{ duration: 3, repeat: Infinity }} filter="url(#glow2)" />
-        <circle cx={AGENT.x} cy={AGENT.y} r={32} fill="#5b21b6" stroke="#a78bfa" />
-        <text x={AGENT.x} y={AGENT.y - 2} textAnchor="middle" className="fill-text font-sans text-[11px] font-bold">AGENT</text>
-        <motion.text key={step} x={AGENT.x} y={AGENT.y + 13} textAnchor="middle" className="fill-[#e9e2ff] font-mono text-[10px]"
+        <motion.circle cx={AGENT.x} cy={AGENT.y} r={46} fill="#e8551f" opacity={0.25} animate={{ r: [44, 52, 44] }} transition={{ duration: 3, repeat: Infinity }} filter="url(#glow2)" />
+        <circle cx={AGENT.x} cy={AGENT.y} r={32} fill="#16130f" stroke="#e8551f" />
+        <text x={AGENT.x} y={AGENT.y - 2} textAnchor="middle" className="fill-paper font-sans text-[11px] font-bold">AGENT</text>
+        <motion.text key={step} x={AGENT.x} y={AGENT.y + 13} textAnchor="middle" className="fill-[#f3eee3] font-mono text-[10px]"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           {step === 0 ? "0 tools" : step === 3 ? "0 tools" : "4 tools"}
         </motion.text>

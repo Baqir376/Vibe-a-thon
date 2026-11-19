@@ -41,35 +41,35 @@ export function NeuralMap({ s, onPulseDone }: { s: ConsoleState; onPulseDone: (i
   return (
     <svg viewBox={`-90 -10 ${W + 180} ${H + 20}`} className="h-full w-full select-none" preserveAspectRatio="xMidYMid meet">
       <defs>
-        <radialGradient id="core"><stop offset="0%" stopColor="#c4b5fd" /><stop offset="55%" stopColor="#7c3aed" /><stop offset="100%" stopColor="#2e1065" /></radialGradient>
-        <radialGradient id="sys"><stop offset="0%" stopColor="#1d2a4a" /><stop offset="100%" stopColor="#0c1324" /></radialGradient>
+        <radialGradient id="core"><stop offset="0%" stopColor="#ffb089" /><stop offset="55%" stopColor="#e8551f" /><stop offset="100%" stopColor="#4a1806" /></radialGradient>
+        <radialGradient id="sys"><stop offset="0%" stopColor="#2a241c" /><stop offset="100%" stopColor="#15120e" /></radialGradient>
         <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
       </defs>
 
       {/* dendrites */}
       {s.systems.map((sys) => pos[sys.name] && (
-        <line key={sys.name} x1={C.x} y1={C.y} x2={pos[sys.name].x} y2={pos[sys.name].y} stroke="#18233d" strokeDasharray="2 7" />
+        <line key={sys.name} x1={C.x} y1={C.y} x2={pos[sys.name].x} y2={pos[sys.name].y} stroke="#2a251e" strokeDasharray="2 7" />
       ))}
       {eps.map((e) => (
-        <line key={"d" + e.k} x1={pos[e.sys].x} y1={pos[e.sys].y} x2={e.x} y2={e.y} stroke="#18233d" />
+        <line key={"d" + e.k} x1={pos[e.sys].x} y1={pos[e.sys].y} x2={e.x} y2={e.y} stroke="#2a251e" />
       ))}
 
       {/* grafted (live) and dormant links */}
       {linked.map((e) => {
         const live = s.live.includes(e.k);
-        const color = e.sys.endsWith("_fused") ? "#a78bfa" : e.cap.mutating ? "#ffb547" : "#6ef2c0";
+        const color = e.sys.endsWith("_fused") ? "#ff7a45" : e.cap.mutating ? "#f2c14e" : "#8fd18a";
         const d = linkD(pos[e.sys].x, pos[e.sys].y, e.x, e.y);
         return (
           <g key={"l" + e.k}>
             {/* solid stroke draws itself in; pathLength owns its dasharray */}
             <motion.path id={"path-" + e.k} d={d} fill="none"
               initial={{ pathLength: 0, opacity: 0 }}
-              animate={{ pathLength: 1, opacity: live ? 0.95 : 0.3, stroke: live ? color : "#33456a", strokeWidth: live ? 2.4 : 1.2 }}
+              animate={{ pathLength: 1, opacity: live ? 0.95 : 0.3, stroke: live ? color : "#5a5043", strokeWidth: live ? 2.4 : 1.2 }}
               transition={{ pathLength: { duration: 0.9, ease: [0.22, 1, 0.36, 1] }, default: { duration: 0.5 } }}
               filter={live ? "url(#glow)" : undefined} />
             {/* dashed overlay: flowing signal when live, dotted when dormant */}
             <motion.path d={d} fill="none" strokeDasharray={live ? "5 11" : "3 7"} className={live ? "link-flow" : ""}
-              initial={{ opacity: 0 }} animate={{ opacity: 1, stroke: live ? "#f4fffb" : "#33456a", strokeWidth: live ? 2.2 : 1.2 }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1, stroke: live ? "#fff1e4" : "#5a5043", strokeWidth: live ? 2.2 : 1.2 }}
               transition={{ duration: 0.4, delay: live ? 0.7 : 0 }} />
           </g>
         );
@@ -82,7 +82,7 @@ export function NeuralMap({ s, onPulseDone }: { s: ConsoleState; onPulseDone: (i
       {eps.map((e) => {
         const live = s.live.includes(e.k), dormant = s.dormant.includes(e.k), fresh = s.fresh.includes(e.k);
         const fused = e.sys.endsWith("_fused");
-        const base = fused ? "#a78bfa" : e.cap.mutating ? "#ffb547" : "#38d6f5";
+        const base = fused ? "#ff7a45" : e.cap.mutating ? "#f2c14e" : "#7d95ff";
         const showLabel = live || fresh || fused || hoverSys === e.sys;
         const right = Math.cos((e.ang * Math.PI) / 180) >= 0;
         return (
@@ -90,22 +90,22 @@ export function NeuralMap({ s, onPulseDone }: { s: ConsoleState; onPulseDone: (i
             <motion.circle cx={e.x} cy={e.y}
               initial={fresh ? { r: 0 } : false}
               animate={{ r: live ? 7.5 : fresh ? 8 : fused ? 7 : 5,
-                         fill: live ? (fused ? "#a78bfa" : e.cap.mutating ? "#ffb547" : "#6ef2c0") : dormant ? "rgba(0,0,0,0)" : fresh ? "#ffd84d" : base,
+                         fill: live ? (fused ? "#ff7a45" : e.cap.mutating ? "#f2c14e" : "#8fd18a") : dormant ? "rgba(0,0,0,0)" : fresh ? "#ffd166" : base,
                          opacity: live || fresh || fused ? 1 : dormant ? 0.9 : 0.32,
-                         stroke: dormant && !live ? "#3a4a6b" : "rgba(0,0,0,0)" }}
+                         stroke: dormant && !live ? "#5a5043" : "rgba(0,0,0,0)" }}
               strokeWidth={1.6} transition={{ type: "spring", stiffness: 260, damping: 16 }}
               filter={live || fresh ? "url(#glow)" : undefined}>
               <title>{`${e.sys} · ${e.cap.spec}\n${e.cap.description}`}</title>
             </motion.circle>
             {fresh && (
-              <motion.circle cx={e.x} cy={e.y} r={8} fill="none" stroke="#ffd84d"
+              <motion.circle cx={e.x} cy={e.y} r={8} fill="none" stroke="#ffd166"
                 animate={{ r: [8, 26], opacity: [0.9, 0] }} transition={{ duration: 1.6, repeat: Infinity }} />
             )}
             <AnimatePresence>
               {showLabel && (
                 <motion.text initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   x={e.x + (right ? 12 : -12)} y={e.y + 3.5} textAnchor={right ? "start" : "end"}
-                  className="font-mono text-[10.5px]" fill={fresh ? "#ffd84d" : live ? "#e8eefb" : "#8392b0"}>
+                  className="font-mono text-[10.5px]" fill={fresh ? "#ffd166" : live ? "#f1eadc" : "#a39887"}>
                   {e.cap.spec.replace(/\{[^}]+\}/g, "{…}")}
                 </motion.text>
               )}
@@ -124,20 +124,20 @@ export function NeuralMap({ s, onPulseDone }: { s: ConsoleState; onPulseDone: (i
         return (
           <g key={sys.name} onPointerEnter={() => setHoverSys(sys.name)} onPointerLeave={() => setHoverSys(null)} className="cursor-default">
             {building && [0, 0.5].map((d) => (
-              <motion.circle key={d} cx={p.x} cy={p.y} r={38} fill="none" stroke="#a78bfa" strokeWidth={2}
+              <motion.circle key={d} cx={p.x} cy={p.y} r={38} fill="none" stroke="#ff7a45" strokeWidth={2}
                 animate={{ r: [38, 92], opacity: [0.9, 0] }} transition={{ duration: 1.2, repeat: Infinity, delay: d }} />
             ))}
             <motion.circle cx={p.x} cy={p.y} r={38} fill="url(#sys)"
               initial={fused ? { scale: 0 } : false}
-              animate={{ stroke: building ? "#a78bfa" : active ? "#6ef2c0" : fused ? "#7c3aed" : "#2b3d63", scale: 1 }}
+              animate={{ stroke: building ? "#ff7a45" : active ? "#8fd18a" : fused ? "#e8551f" : "#4a4033", scale: 1 }}
               strokeWidth={1.8} style={{ transformOrigin: `${p.x}px ${p.y}px` }} transition={{ type: "spring", stiffness: 200, damping: 14 }} />
             <text x={p.x} y={p.y + 1} textAnchor="middle" className="fill-text font-sans text-[14px] font-semibold">{sys.name.replace("_fused", "")}</text>
-            <text x={p.x} y={p.y + 16} textAnchor="middle" className="font-mono text-[9.5px]" fill={fused ? "#c4b5fd" : "#8392b0"}>
+            <text x={p.x} y={p.y + 16} textAnchor="middle" className="font-mono text-[9.5px]" fill={fused ? "#ffb089" : "#a39887"}>
               {sys.mode === "hosted" ? "synapse hosted" : fused ? "fused · custom" : "synapse local"}
             </text>
             <AnimatePresence>
               {building && (
-                <motion.text key="b" x={p.x} y={p.y - 52} textAnchor="middle" className="font-mono text-[11px]" fill="#c4b5fd"
+                <motion.text key="b" x={p.x} y={p.y - 52} textAnchor="middle" className="font-mono text-[11px]" fill="#ffb089"
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                   synapse build…
                 </motion.text>
@@ -153,7 +153,7 @@ export function NeuralMap({ s, onPulseDone }: { s: ConsoleState; onPulseDone: (i
         transition={{ duration: s.busy ? 1.1 : 3.2, repeat: Infinity }} />
       <circle cx={C.x} cy={C.y} r={46} fill="url(#core)" />
       <text x={C.x} y={C.y - 3} textAnchor="middle" className="fill-white font-display text-[15px] font-bold tracking-wide">AGENT</text>
-      <motion.text key={s.live.length} x={C.x} y={C.y + 15} textAnchor="middle" className="font-mono text-[11px]" fill="#efeaff"
+      <motion.text key={s.live.length} x={C.x} y={C.y + 15} textAnchor="middle" className="font-mono text-[11px]" fill="#ffe9dc"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
         {s.live.length} {s.live.length === 1 ? "tool" : "tools"}
       </motion.text>

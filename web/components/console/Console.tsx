@@ -80,12 +80,12 @@ export function Console() {
       <div className="grid min-h-0 flex-1 lg:grid-cols-[1fr_430px]">
         <motion.section initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8, delay: 0.15 }}
           className="dot-grid relative min-h-0 overflow-hidden">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(124,58,237,.12),transparent_65%)]" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(232,85,31,.12),transparent_65%)]" />
           <div className="absolute inset-0 p-4"><NeuralMap s={s} onPulseDone={onPulseDone} /></div>
           <div className="pointer-events-none absolute top-5 left-6"><LiveCounter live={s.live.length} total={s.caps.length || 0} /></div>
           <div className="absolute bottom-5 left-6"><Stats stats={s.stats} /></div>
           <div className="absolute right-5 bottom-5 flex flex-wrap justify-end gap-4 text-[11px] text-muted">
-            {[["#38d6f5", "read"], ["#ffb547", "writes"], ["#6ef2c0", "grafted"], ["#3a4a6b", "dormant"], ["#ffd84d", "new"], ["#a78bfa", "fused"]].map(([col, l]) => (
+            {[["#7d95ff", "read"], ["#f2c14e", "writes"], ["#8fd18a", "grafted"], ["#5a5043", "dormant"], ["#ffd166", "new"], ["#ff7a45", "fused"]].map(([col, l]) => (
               <span key={l} className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full" style={{ background: col }} />{l}</span>
             ))}
           </div>
@@ -201,7 +201,7 @@ function ReplayApproval({ approvals }: { approvals: { id: number; kind: string; 
       {a && (
         <motion.div key={a.id} initial={{ opacity: 0, y: 30, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20 }}
           transition={{ type: "spring", stiffness: 300, damping: 24 }}
-          className="fixed bottom-8 left-1/2 z-50 w-[420px] -translate-x-1/2 rounded-3xl border border-write/40 bg-panel/95 p-5 shadow-[0_0_80px_rgba(255,181,71,.2)] backdrop-blur">
+          className="fixed bottom-8 left-1/2 z-50 w-[420px] -translate-x-1/2 rounded-3xl border border-write/40 bg-panel/95 p-5 shadow-[0_0_80px_rgba(242,193,78,.2)] backdrop-blur">
           <p className="font-display font-semibold text-write">{a.kind === "graft" ? "Grant write access?" : "Allow this action?"}</p>
           <p className="mt-1 font-mono text-[12px] text-muted">{a.detail.system} · {a.detail.endpoint ?? (a.detail.endpoints ?? []).join(", ")}</p>
           <div className="mt-4 flex justify-end gap-2 text-sm">

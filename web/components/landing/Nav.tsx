@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { motion, useMotionValueEvent, useScroll } from "motion/react";
 import { useState } from "react";
-import { LogoMark, Wordmark } from "@/components/Logo";
+import { InkMark } from "@/components/Logo";
 import { Magnetic } from "@/components/fx/Interactions";
 
 export function Nav() {
@@ -11,22 +11,22 @@ export function Nav() {
   const [scrolled, setScrolled] = useState(false);
   useMotionValueEvent(scrollY, "change", (v) => setScrolled(v > 24));
   return (
-    <motion.nav
-      initial={{ y: -40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3, duration: 0.6 }}
-      className="fixed inset-x-0 top-4 z-50 flex justify-center px-4"
-    >
-      <div className={`flex w-full max-w-5xl items-center justify-between rounded-full px-4 py-2 transition-all duration-500 ${scrolled ? "glass shadow-[0_8px_40px_rgba(0,0,0,.45)]" : "border border-transparent"}`}>
-        <Link href="/" className="flex items-center gap-2"><LogoMark size={26} /><Wordmark className="text-[17px]" /></Link>
-        <div className="hidden items-center gap-7 text-sm text-muted md:flex">
-          <a href="#preview" className="transition hover:text-text">The app</a>
-          <a href="#how" className="transition hover:text-text">How it works</a>
-          <a href="#capabilities" className="transition hover:text-text">Capabilities</a>
-          <a href="#proof" className="transition hover:text-text">Proof</a>
+    <motion.nav initial={{ y: -40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2, duration: 0.6 }}
+      className="fixed inset-x-0 top-4 z-50 flex justify-center px-4">
+      <div className={`flex w-full max-w-5xl items-center justify-between rounded-full px-4 py-2 transition-all duration-500 ${scrolled ? "border-[1.5px] border-carbon bg-paper/90 shadow-[3px_3px_0_#16130f] backdrop-blur" : "border-[1.5px] border-transparent"}`}>
+        <Link href="/" className="flex items-center gap-2 text-carbon" data-cursor="Home">
+          <InkMark size={26} />
+          <span className="font-display text-[19px] font-semibold tracking-tight">Synapto<i className="text-signal">genesis</i></span>
+        </Link>
+        <div className="hidden items-center gap-7 text-sm text-graphite md:flex">
+          {[["#preview", "The app"], ["#how", "How it works"], ["#notes", "Field notes"], ["#proof", "Proof"]].map(([h, l]) => (
+            <a key={h} href={h} className="relative transition hover:text-carbon">{l}</a>
+          ))}
         </div>
         <Magnetic strength={0.2}>
           <Link href="/app" data-cursor="Launch"
-            className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full bg-white px-5 py-2 text-sm font-semibold text-black transition-shadow hover:shadow-[0_0_34px_rgba(196,181,253,.6)]">
-            <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-live opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" /></span>
+            className="inline-flex items-center gap-2 rounded-full bg-carbon px-5 py-2 text-sm font-semibold text-paper">
+            <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-signal opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-signal" /></span>
             Launch app
           </Link>
         </Magnetic>

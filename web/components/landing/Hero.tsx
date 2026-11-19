@@ -1,103 +1,116 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
-import { NeuralField } from "@/components/NeuralField";
+import { InkField } from "@/components/InkField";
 import { Magnetic } from "@/components/fx/Interactions";
-import { HeroCore } from "@/components/three/HeroCore";
 
-const LINE_1 = ["Agents", "that", "grow"];
-const LINE_2 = ["their", "own", "tools."];
+function SpecimenPoster() {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center" aria-hidden>
+      <div className="h-36 w-36 rounded-full bg-[radial-gradient(circle_at_35%_30%,#fffaf0_0%,#efe5d2_45%,#c9bb9f_100%)] shadow-[0_30px_60px_rgba(22,19,15,.18)]" />
+    </div>
+  );
+}
+// three.js loads after first paint and only in the browser.
+const Specimen = dynamic(() => import("@/components/three/Specimen"), { ssr: false, loading: SpecimenPoster });
 
 /** Seconds until the hero may animate: wait for the boot sequence only when it is actually playing. */
 export function useBootDelay() {
   const [base] = useState(() => {
-    try { return typeof window !== "undefined" && sessionStorage.getItem("synapto-boot") === "1" ? 0.15 : 2.6; }
+    try { return typeof window !== "undefined" && sessionStorage.getItem("synapto-boot") === "1" ? 0.15 : 2.5; }
     catch { return 0.15; }
   });
   return base;
 }
 
+const rise = (d: number) => ({ initial: { opacity: 0, y: 28 }, animate: { opacity: 1, y: 0 }, transition: { delay: d, duration: 0.8, ease: [0.22, 1, 0.36, 1] as const } });
+
 export function Hero() {
   const B = useBootDelay();
   return (
-    <section className="relative flex min-h-[100svh] items-center overflow-hidden pt-28 pb-16">
-      <NeuralField className="opacity-80" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_55%_at_50%_40%,transparent_0%,#05070d_80%)]" />
-      <div className="pointer-events-none absolute -top-40 left-1/2 h-[520px] w-[820px] -translate-x-1/2 rounded-full bg-violet-deep/25 blur-[140px]" />
-
-      <div className="relative mx-auto grid w-full max-w-6xl items-center gap-6 px-5 lg:grid-cols-[1.05fr_.95fr]">
-        <div>
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: B + 0.1 }}
-            className="glass mb-7 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs text-muted">
-            <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-live opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-live" /></span>
-            Vibe-a-thon · Track 4 · powered by <span className="font-mono text-text">Synapse CLI</span>
+    <section className="relative flex min-h-[100svh] items-center overflow-hidden pt-28 pb-14">
+      <InkField />
+      <div className="relative mx-auto grid w-full max-w-6xl items-center gap-8 px-5 lg:grid-cols-[1.08fr_.92fr]">
+        <div className="relative">
+          <motion.div {...rise(B)} className="mb-7 flex items-center gap-3">
+            <motion.span initial={{ rotate: -14, scale: 1.6, opacity: 0 }} animate={{ rotate: -4, scale: 1, opacity: 1 }}
+              transition={{ delay: B + 0.25, type: "spring", stiffness: 260, damping: 14 }}
+              className="stamp inline-block px-2.5 py-1 text-[11px] text-signal">Track 4 · Open innovation</motion.span>
+            <span className="font-mono text-xs text-graphite">built on <span className="text-carbon">Synapse CLI</span></span>
           </motion.div>
 
-          <h1 className="font-display text-[clamp(2.4rem,5vw,4.15rem)] leading-[1.02] font-extrabold tracking-[-0.035em]">
-            {[LINE_1, LINE_2].map((line, li) => (
-              <span key={li} className="block whitespace-nowrap">
-                {line.map((w, i) => (
-                  <motion.span key={w} className={`mr-[0.22em] inline-block ${li === 1 ? "text-gradient" : ""}`}
-                    initial={{ opacity: 0, y: 40, filter: "blur(12px)" }}
-                    animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                    transition={{ delay: B + 0.15 + (li * 3 + i) * 0.08, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}>
-                    {w}
-                  </motion.span>
-                ))}
-              </span>
-            ))}
+          <h1 className="font-display text-[clamp(3rem,6.6vw,5.6rem)] leading-[0.95] font-semibold tracking-[-0.03em] text-carbon">
+            <motion.span {...rise(B + 0.1)} className="block">Agents that</motion.span>
+            <motion.span {...rise(B + 0.2)} className="relative mr-[0.12em] inline-block pr-[0.04em] italic text-signal" style={{ fontVariationSettings: '"SOFT" 100, "WONK" 1' }}>
+              grow
+              <svg className="absolute -bottom-3 left-0 h-4 w-full" viewBox="0 0 200 16" preserveAspectRatio="none" aria-hidden>
+                <motion.path d="M2 11 C 40 3, 90 15, 130 8 S 185 5, 198 9" fill="none" stroke="#e8551f" strokeWidth="3.2" strokeLinecap="round"
+                  initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: B + 0.9, duration: 0.8, ease: "easeInOut" }} />
+              </svg>
+            </motion.span>{" "}
+            <motion.span {...rise(B + 0.3)} className="inline-block">their own</motion.span>
+            <motion.span {...rise(B + 0.4)} className="block">tools.</motion.span>
           </h1>
 
-          <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: B + 0.75, duration: 0.6 }}
-            className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
-            Synaptogenesis starts with <span className="text-text">zero</span> tools. When a question needs a system,
-            it runs <span className="font-mono text-violet">synapse build</span> itself, grafts only the endpoints it
-            needs, answers across systems, and prunes the access afterwards.
-          </motion.p>
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: B + 1.0 }}
-            className="mt-4 border-l-2 border-violet/60 pl-4 font-display text-base text-text/90 italic">
-            Every other team used Synapse to build an agent. We built an agent that uses Synapse.
+          <motion.p {...rise(B + 0.6)} className="mt-8 max-w-xl text-lg leading-relaxed text-graphite">
+            Synaptogenesis starts with <b className="text-carbon">zero</b> tools. When a question needs a legacy system, the
+            agent runs <code className="rounded bg-paper-3 px-1.5 py-0.5 font-mono text-[0.9em] text-carbon">synapse build</code> itself,
+            grafts only the endpoints it needs, answers, and prunes the access.
           </motion.p>
 
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: B + 1.15 }}
-            className="mt-10 flex flex-wrap items-center gap-4">
+          <motion.div {...rise(B + 0.75)} className="mt-9 flex flex-wrap items-center gap-4">
             <Magnetic>
               <Link href="/app" data-cursor="Launch"
-                className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full bg-white px-7 py-3.5 font-semibold text-black transition-shadow hover:shadow-[0_0_50px_rgba(196,181,253,.55)]">
-                <span className="relative z-10">Launch the app</span>
-                <motion.span className="relative z-10 inline-block" animate={{ x: [0, 4, 0] }} transition={{ repeat: Infinity, duration: 1.6 }}>→</motion.span>
+                className="group inline-flex items-center gap-2.5 rounded-full bg-carbon px-7 py-3.5 font-semibold text-paper shadow-[4px_4px_0_#e8551f] transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0_#e8551f]">
+                Launch the app
+                <motion.span animate={{ x: [0, 4, 0] }} transition={{ repeat: Infinity, duration: 1.6 }}>→</motion.span>
               </Link>
             </Magnetic>
             <Magnetic>
-              <a href="#preview" data-cursor="Watch" className="glass inline-flex rounded-full px-7 py-3.5 font-medium text-text transition hover:border-violet/50">
-                See it run
+              <a href="#preview" data-cursor="Watch"
+                className="inline-flex rounded-full border-[1.5px] border-carbon px-7 py-3.5 font-semibold text-carbon transition hover:bg-carbon hover:text-paper">
+                See a run
               </a>
             </Magnetic>
           </motion.div>
+
+          <motion.p {...rise(B + 1)} className="mt-8 font-hand text-2xl text-graphite">
+            “Every other team used Synapse to build an agent.<br />We built an agent that uses Synapse.”
+          </motion.p>
         </div>
 
-        <motion.div initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: B + 0.3, duration: 1.4, ease: [0.22, 1, 0.36, 1] }} className="relative -my-10 lg:-mr-16">
-          <HeroCore />
-          <p className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 font-mono text-[10.5px] tracking-[0.2em] text-muted uppercase">
-            move · click the core
-          </p>
-        </motion.div>
+        <motion.figure initial={{ opacity: 0, rotate: 3, y: 40 }} animate={{ opacity: 1, rotate: 1.2, y: 0 }}
+          transition={{ delay: B + 0.35, duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
+          className="card-paper relative mx-auto w-full max-w-[520px] rounded-[18px] p-3">
+          <div className="graph-paper relative aspect-[1/1] overflow-hidden rounded-[12px] border border-rule bg-paper">
+            <Specimen />
+          </div>
+          <figcaption className="flex items-baseline justify-between px-1 pt-3 font-mono text-[11px] text-graphite">
+            <span><b className="text-carbon">Fig. 1</b> · the agent grafting two systems, live</span>
+            <span>drag · poke</span>
+          </figcaption>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: B + 1.6 }}
+            className="pointer-events-none absolute -bottom-20 -left-36 hidden w-56 rotate-[-6deg] font-hand text-2xl leading-tight text-signal lg:block">
+            move your mouse over the paper. it grows neurons!
+            <svg className="absolute -top-14 left-24 h-14 w-20" viewBox="0 0 80 56" aria-hidden>
+              <motion.path d="M6 50 C 20 20, 44 10, 74 6" fill="none" stroke="#e8551f" strokeWidth="2.2" strokeLinecap="round"
+                initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: B + 1.9, duration: 0.7 }} />
+              <motion.path d="M64 2 L 75 6 L 66 14" fill="none" stroke="#e8551f" strokeWidth="2.2" strokeLinecap="round"
+                initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: B + 2.5, duration: 0.3 }} />
+            </svg>
+          </motion.div>
+        </motion.figure>
       </div>
-
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: B + 1.6 }}
-        className="absolute bottom-6 left-1/2 -translate-x-1/2 text-xs tracking-[0.25em] text-muted uppercase">
-        <motion.div animate={{ y: [0, 6, 0] }} transition={{ repeat: Infinity, duration: 2 }}>scroll</motion.div>
-      </motion.div>
     </section>
   );
 }
 
-/* A looping, scripted replay of a real run: search → Synapse build → tools grow → answer → prune. */
+/* A looping, scripted replay of a real run: search → Synapse build → tools grow → answer → prune. (Night-lab colours.) */
 const SCRIPT: { t: string; c?: string; tools?: number; pause?: number }[] = [
-  { t: '› Which customers are hit by the delayed Pune insulin shipment?', c: "text-text", tools: 0, pause: 900 },
+  { t: "› Which customers are hit by the delayed Pune insulin shipment?", c: "text-text", tools: 0, pause: 900 },
   { t: "  find_capability  → orders · tickets · roster", c: "text-muted", pause: 700 },
   { t: '  $ synapse build --auto --endpoints "GET /shipments/delayed,…"', c: "text-violet", pause: 500 },
   { t: "  ✓ orders grafted   2 tools   0.4 s", c: "text-live", tools: 2, pause: 450 },
@@ -126,40 +139,31 @@ export function GraftTerminal({ startAfter }: { startAfter: number }) {
   }, [startAfter]);
 
   return (
-    <div className="glass relative overflow-hidden rounded-2xl shadow-[0_30px_120px_rgba(124,58,237,.25)]">
-      <div className="flex items-center justify-between border-b border-line px-4 py-3">
-        <div className="flex gap-1.5">{["#ff5f57", "#febc2e", "#28c840"].map((c) => <span key={c} className="h-2.5 w-2.5 rounded-full" style={{ background: c }} />)}</div>
-        <span className="font-mono text-[11px] text-muted">synaptogenesis — live graft</span>
-        <ToolMeter tools={tools} />
+    <div className="relative overflow-hidden rounded-2xl bg-ink">
+      <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
+        <span className="font-mono text-[11px] text-muted">synaptogenesis · live graft</span>
+        <div className="flex items-center gap-2 font-mono text-[11px]">
+          <span className="text-muted">tools</span>
+          <div className="flex gap-0.5">
+            {Array.from({ length: 6 }, (_, i) => (
+              <motion.span key={i} className="h-3 w-1.5 rounded-sm" animate={{ backgroundColor: i < tools ? "#8fd18a" : "#2e2820" }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }} />
+            ))}
+          </div>
+          <span className="w-12 text-text">{tools} / 39</span>
+        </div>
       </div>
-      <div className="h-[300px] space-y-1.5 overflow-hidden p-4 font-mono text-[12.5px] leading-relaxed">
+      <div className="h-[290px] space-y-1.5 overflow-hidden p-4 font-mono text-[12.5px] leading-relaxed">
         <AnimatePresence initial={false}>
           {SCRIPT.slice(0, n).map((s, i) => (
             <motion.div key={`${i}-${s.t}`} className={`${s.c} whitespace-pre`}
-              initial={{ opacity: 0, x: -8, filter: "blur(4px)" }} animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-              exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
+              initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
               {s.t}
             </motion.div>
           ))}
         </AnimatePresence>
         <motion.span className="inline-block h-4 w-2 bg-violet/80 align-middle" animate={{ opacity: [1, 0, 1] }} transition={{ repeat: Infinity, duration: 1 }} />
       </div>
-    </div>
-  );
-}
-
-function ToolMeter({ tools }: { tools: number }) {
-  return (
-    <div className="flex items-center gap-2 font-mono text-[11px]">
-      <span className="text-muted">tools</span>
-      <div className="flex gap-0.5">
-        {Array.from({ length: 6 }, (_, i) => (
-          <motion.span key={i} className="h-3 w-1.5 rounded-sm"
-            animate={{ backgroundColor: i < tools ? "#6ef2c0" : "#1b2640", boxShadow: i < tools ? "0 0 8px #6ef2c0" : "0 0 0 transparent" }}
-            transition={{ type: "spring", stiffness: 300, damping: 20 }} />
-        ))}
-      </div>
-      <motion.span key={tools} initial={{ y: -6, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-14 text-text">{tools} / 39</motion.span>
     </div>
   );
 }
