@@ -57,7 +57,8 @@ Useful environment variables: `SYNAPTO_PROVIDER` (pin one provider), `SYNAPTO_MO
 ```bash
 python scripts/run_services.py                 # 4 legacy services; code edits restart the affected service
 python -m synaptogenesis warm --reset          # Synapse pre-builds the hosted servers (read-only surface)
-python -m synaptogenesis web                   # neural-map dashboard → http://127.0.0.1:8700
+python -m synaptogenesis web                   # agent server + API (and the simple dashboard) on :8700
+cd web && npm install && npm run dev           # the designed frontend → http://localhost:3000 (landing) and /console
 #   add --prewarm for instant grafts (Synapse builds every read-only surface up front, exposing nothing)
 
 # live update, mid-demo (the Drift Sentinel runs inside `web` and `chat`):
@@ -149,3 +150,4 @@ systems.yaml       registry of systems; policy.yaml: least-privilege rules
 - [x] Tool fusion: Hebbian detection → `synapse build --custom` → sandbox verification → wired + supersedes the old write step
 - [ ] Benchmark: all 39 tools pre-wired vs just-in-time grafting (accuracy, tokens, latency)
 - [x] Neural-map dashboard (FastAPI + SSE + SVG), approvals in the UI
+- [x] Designed frontend in `web/` (Next.js 16, Tailwind 4, Motion): boot sequence, landing page, live console

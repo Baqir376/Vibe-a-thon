@@ -99,6 +99,9 @@ def build_app(prewarm: bool = False) -> FastAPI:
         await gm.close()
 
     app = FastAPI(title="Synaptogenesis", lifespan=lifespan)
+    from fastapi.middleware.cors import CORSMiddleware
+    app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+                       allow_methods=["*"], allow_headers=["*"])  # the Next.js frontend in web/
 
     @app.get("/")
     async def index():

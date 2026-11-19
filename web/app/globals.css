@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-ink: #05070d;
+  --color-night: #0a0f1c;
+  --color-panel: #0e1526;
+  --color-line: #1b2640;
+  --color-text: #e8eefb;
+  --color-muted: #8392b0;
+  --color-violet: #a78bfa;
+  --color-violet-deep: #7c3aed;
+  --color-read: #38d6f5;
+  --color-write: #ffb547;
+  --color-live: #6ef2c0;
+  --color-drift: #ffd84d;
+  --color-danger: #ff6b81;
+  --font-display: var(--font-jakarta);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains);
+}
+
+html {
+  background: var(--color-ink);
+  color-scheme: dark;
+}
+
+body {
+  background: var(--color-ink);
+  color: var(--color-text);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: rgba(167, 139, 250, 0.35); }
+
+/* film grain over everything, very subtle */
+.grain::after {
+  content: "";
+  position: fixed;
+  inset: -50%;
+  pointer-events: none;
+  z-index: 60;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  animation: grain 1.2s steps(6) infinite;
+}
+@keyframes grain {
+  0% { transform: translate(0, 0); } 20% { transform: translate(-3%, 2%); } 40% { transform: translate(2%, -3%); }
+  60% { transform: translate(-2%, -1%); } 80% { transform: translate(3%, 3%); } 100% { transform: translate(0, 0); }
+}
+
+.glass {
+  background: linear-gradient(180deg, rgba(20, 28, 48, 0.72), rgba(12, 18, 32, 0.62));
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid rgba(120, 140, 190, 0.14);
+}
+
+.text-gradient {
+  background: linear-gradient(100deg, #f4f1ff 0%, #c4b5fd 35%, #6ef2c0 70%, #38d6f5 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.dot-grid {
+  background-image: radial-gradient(rgba(130, 150, 200, 0.13) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+
+@keyframes flow { to { stroke-dashoffset: -24; } }
+.link-flow { animation: flow 0.9s linear infinite; }
+
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+.shimmer {
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.08) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+  .grain::after { display: none; }
+}
