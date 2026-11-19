@@ -4,6 +4,8 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { NeuralField } from "@/components/NeuralField";
+import { Magnetic } from "@/components/fx/Interactions";
+import { HeroCore } from "@/components/three/HeroCore";
 
 const LINE_1 = ["Agents", "that", "grow"];
 const LINE_2 = ["their", "own", "tools."];
@@ -25,7 +27,7 @@ export function Hero() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_55%_at_50%_40%,transparent_0%,#05070d_80%)]" />
       <div className="pointer-events-none absolute -top-40 left-1/2 h-[520px] w-[820px] -translate-x-1/2 rounded-full bg-violet-deep/25 blur-[140px]" />
 
-      <div className="relative mx-auto grid w-full max-w-6xl items-center gap-14 px-5 lg:grid-cols-[1.15fr_.85fr]">
+      <div className="relative mx-auto grid w-full max-w-6xl items-center gap-6 px-5 lg:grid-cols-[1.05fr_.95fr]">
         <div>
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: B + 0.1 }}
             className="glass mb-7 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs text-muted">
@@ -60,21 +62,28 @@ export function Hero() {
           </motion.p>
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: B + 1.15 }}
-            className="mt-9 flex flex-wrap gap-3">
-            <Link href="/console"
-              className="group relative inline-flex items-center gap-2 rounded-xl bg-violet px-6 py-3 font-semibold text-[#160d33] shadow-[0_0_0_rgba(167,139,250,0)] transition hover:shadow-[0_0_40px_rgba(167,139,250,.55)]">
-              Open the live console
-              <motion.span className="inline-block" animate={{ x: [0, 4, 0] }} transition={{ repeat: Infinity, duration: 1.6 }}>→</motion.span>
-            </Link>
-            <a href="#how" className="glass rounded-xl px-6 py-3 font-medium text-text transition hover:border-violet/50">
-              How it works
-            </a>
+            className="mt-10 flex flex-wrap items-center gap-4">
+            <Magnetic>
+              <Link href="/app" data-cursor="Launch"
+                className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full bg-white px-7 py-3.5 font-semibold text-black transition-shadow hover:shadow-[0_0_50px_rgba(196,181,253,.55)]">
+                <span className="relative z-10">Launch the app</span>
+                <motion.span className="relative z-10 inline-block" animate={{ x: [0, 4, 0] }} transition={{ repeat: Infinity, duration: 1.6 }}>→</motion.span>
+              </Link>
+            </Magnetic>
+            <Magnetic>
+              <a href="#preview" data-cursor="Watch" className="glass inline-flex rounded-full px-7 py-3.5 font-medium text-text transition hover:border-violet/50">
+                See it run
+              </a>
+            </Magnetic>
           </motion.div>
         </div>
 
-        <motion.div initial={{ opacity: 0, y: 30, rotateX: 12 }} animate={{ opacity: 1, y: 0, rotateX: 0 }}
-          transition={{ delay: B + 0.5, duration: 0.9, ease: [0.22, 1, 0.36, 1] }} style={{ perspective: 1000 }}>
-          <GraftTerminal startAfter={B} />
+        <motion.div initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: B + 0.3, duration: 1.4, ease: [0.22, 1, 0.36, 1] }} className="relative -my-10 lg:-mr-16">
+          <HeroCore />
+          <p className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 font-mono text-[10.5px] tracking-[0.2em] text-muted uppercase">
+            move · click the core
+          </p>
         </motion.div>
       </div>
 
@@ -99,7 +108,7 @@ const SCRIPT: { t: string; c?: string; tools?: number; pause?: number }[] = [
   { t: "  ✂ pruned → tools back to 0", c: "text-muted", tools: 0, pause: 2200 },
 ];
 
-function GraftTerminal({ startAfter }: { startAfter: number }) {
+export function GraftTerminal({ startAfter }: { startAfter: number }) {
   const [n, setN] = useState(0);
   const [tools, setTools] = useState(0);
   useEffect(() => {

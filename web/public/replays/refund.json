@@ -1,0 +1,769 @@
+{
+ "id": "refund",
+ "title": "Process a refund",
+ "blurb": "Uses the verified tool Synapse fused from the refund workflow. Every data change asks a human first.",
+ "question": "Process a refund for ticket TKT-9002 (order ORD-5003, order value 35390 INR): the delivery was 4 days late.",
+ "recorded_at": "2026-11-20 00:38",
+ "state": {
+  "systems": [
+   {
+    "name": "orders",
+    "mode": "hosted",
+    "description": "Customers (clinics, pharmacies), their orders, and shipments - carrier, delays and delay reasons, rerouting. Python/FastAPI."
+   },
+   {
+    "name": "inventory",
+    "mode": "local",
+    "description": "Warehouse stock per SKU, low-stock alerts, expiring batches, stock reservations, draft purchase orders. Python/FastAPI."
+   },
+   {
+    "name": "tickets",
+    "mode": "local",
+    "description": "Customer support tickets, comments, ticket status, refunds under the refund policy. Python/FastAPI."
+   },
+   {
+    "name": "roster",
+    "mode": "hosted",
+    "description": "Staff, account managers per customer, who is on call per region/team, paging staff. Python/FastAPI."
+   },
+   {
+    "name": "tickets_fused",
+    "mode": "fused",
+    "description": "Verified one-step workflow tools composed by Synapse Custom mode from tickets's internal functions."
+   }
+  ],
+  "capabilities": [
+   {
+    "system": "inventory",
+    "tool": "list_products",
+    "spec": "GET /products",
+    "mutating": false,
+    "description": "List every product in the catalogue with price and cold-chain flag."
+   },
+   {
+    "system": "inventory",
+    "tool": "get_product",
+    "spec": "GET /products/{sku}",
+    "mutating": false,
+    "description": "Get one product by SKU."
+   },
+   {
+    "system": "inventory",
+    "tool": "list_warehouses",
+    "spec": "GET /warehouses",
+    "mutating": false,
+    "description": "List warehouses with city, region and whether they have cold storage."
+   },
+   {
+    "system": "inventory",
+    "tool": "get_stock",
+    "spec": "GET /stock",
+    "mutating": false,
+    "description": "Available stock (on hand minus reservations) per warehouse and SKU. Filter by warehouse_id and/or sku."
+   },
+   {
+    "system": "inventory",
+    "tool": "get_low_stock",
+    "spec": "GET /stock/low",
+    "mutating": false,
+    "description": "Items whose available stock is below the reorder threshold, with the shortfall."
+   },
+   {
+    "system": "inventory",
+    "tool": "get_warehouse_stock",
+    "spec": "GET /warehouses/{warehouse_id}/stock",
+    "mutating": false,
+    "description": "Available stock of every SKU in one warehouse (e.g. WH-PUNE)."
+   },
+   {
+    "system": "inventory",
+    "tool": "get_sku_availability",
+    "spec": "GET /products/{sku}/availability",
+    "mutating": false,
+    "description": "Where a SKU is available: stock per warehouse, so shortages can be covered from another warehouse."
+   },
+   {
+    "system": "inventory",
+    "tool": "get_expiring_batches",
+    "spec": "GET /batches/expiring",
+    "mutating": false,
+    "description": "Batches that expire within the given number of days."
+   },
+   {
+    "system": "inventory",
+    "tool": "get_batches_expiring_within",
+    "spec": "GET /batches/expiring-within/{days}",
+    "mutating": false,
+    "description": "Batches that expire within the given number of days (path form)."
+   },
+   {
+    "system": "inventory",
+    "tool": "create_reservation",
+    "spec": "POST /reservations",
+    "mutating": true,
+    "description": "Reserve stock for a customer order. Required: warehouse_id (WH-PUNE|WH-MUM|WH-BLR), sku, qty (integer), order_id (ORD-*). Fails if not enough is available."
+   },
+   {
+    "system": "inventory",
+    "tool": "list_reservations",
+    "spec": "GET /reservations",
+    "mutating": false,
+    "description": "List stock reservations, optionally for one order."
+   },
+   {
+    "system": "inventory",
+    "tool": "create_purchase_order",
+    "spec": "POST /purchase-orders",
+    "mutating": true,
+    "description": "Create a DRAFT purchase order to restock a warehouse (not sent to suppliers). Required: warehouse_id (WH-*), lines (list of {sku, qty}). Optional: note."
+   },
+   {
+    "system": "tickets",
+    "tool": "list_tickets",
+    "spec": "GET /tickets",
+    "mutating": false,
+    "description": "List support tickets. Filter by customer_id, order_id and/or status."
+   },
+   {
+    "system": "tickets",
+    "tool": "list_customer_tickets",
+    "spec": "GET /customers/{customer_id}/tickets",
+    "mutating": false,
+    "description": "All support tickets raised by one customer (e.g. CUS-101), any status."
+   },
+   {
+    "system": "tickets",
+    "tool": "list_order_tickets",
+    "spec": "GET /orders/{order_id}/tickets",
+    "mutating": false,
+    "description": "All support tickets that reference one order (e.g. ORD-5001)."
+   },
+   {
+    "system": "tickets",
+    "tool": "get_ticket",
+    "spec": "GET /tickets/{ticket_id}",
+    "mutating": false,
+    "description": "Get one ticket with its comment thread."
+   },
+   {
+    "system": "tickets",
+    "tool": "create_ticket",
+    "spec": "POST /tickets",
+    "mutating": true,
+    "description": "Open a new support ticket. Required: customer_id (CUS-*), subject. Optional: priority (low|medium|high|urgent, default medium), order_id (ORD-*)."
+   },
+   {
+    "system": "tickets",
+    "tool": "add_comment",
+    "spec": "POST /tickets/{ticket_id}/comments",
+    "mutating": true,
+    "description": "Add a comment to a ticket (e.g. an update to the customer). Required: ticket_id (path), author (e.g. \"support\"), text."
+   },
+   {
+    "system": "tickets",
+    "tool": "set_ticket_status",
+    "spec": "PATCH /tickets/{ticket_id}/status",
+    "mutating": true,
+    "description": "Change a ticket's status. Required: ticket_id (path), status (open|pending|resolved|closed)."
+   },
+   {
+    "system": "tickets",
+    "tool": "create_refund",
+    "spec": "POST /refunds",
+    "mutating": true,
+    "description": "Issue a refund for a ticket; the refund policy computes the refundable amount. Required: ticket_id (TKT-*), order_id (ORD-*), amount_inr (the FULL order value, number), reason (exactly one of: late_delivery, damaged, wrong_item, cold_chain_breach, other). For late_delivery also pass days_late (integer). Refuses duplicates and amounts above the auto-refund limit."
+   },
+   {
+    "system": "tickets",
+    "tool": "list_refunds",
+    "spec": "GET /refunds",
+    "mutating": false,
+    "description": "List refunds already issued, optionally for one ticket."
+   },
+   {
+    "system": "roster",
+    "tool": "list_staff",
+    "spec": "GET /staff",
+    "mutating": false,
+    "description": "List all staff with team, region, role and the customer accounts they manage."
+   },
+   {
+    "system": "roster",
+    "tool": "get_staff",
+    "spec": "GET /staff/{staff_id}",
+    "mutating": false,
+    "description": "Get one staff member by id, e.g. EMP-21."
+   },
+   {
+    "system": "roster",
+    "tool": "get_account_manager",
+    "spec": "GET /customers/{customer_id}/account-manager",
+    "mutating": false,
+    "description": "The account manager responsible for a customer, e.g. CUS-101."
+   },
+   {
+    "system": "roster",
+    "tool": "get_oncall",
+    "spec": "GET /oncall/{region}",
+    "mutating": false,
+    "description": "Who is on call today in a region (west, south), for every team."
+   },
+   {
+    "system": "roster",
+    "tool": "page_staff",
+    "spec": "POST /pages",
+    "mutating": true,
+    "description": "Page (alert) a staff member about an incident; sends a real notification. Required: staff_id (EMP-*), message. Optional: severity (low|high|critical, default high)."
+   },
+   {
+    "system": "roster",
+    "tool": "list_pages",
+    "spec": "GET /pages",
+    "mutating": false,
+    "description": "List pages that were sent, with acknowledgement status."
+   },
+   {
+    "system": "orders",
+    "tool": "list_customers",
+    "spec": "GET /customers",
+    "mutating": false,
+    "description": "List all customers (clinics and pharmacies) with city and account tier."
+   },
+   {
+    "system": "orders",
+    "tool": "get_customer",
+    "spec": "GET /customers/{customer_id}",
+    "mutating": false,
+    "description": "Get one customer by id, e.g. CUS-101: name, city, tier, phone."
+   },
+   {
+    "system": "orders",
+    "tool": "list_customer_orders",
+    "spec": "GET /customers/{customer_id}/orders",
+    "mutating": false,
+    "description": "All orders placed by one customer."
+   },
+   {
+    "system": "orders",
+    "tool": "list_orders",
+    "spec": "GET /orders",
+    "mutating": false,
+    "description": "List all orders with status, items, value and the shipment carrying them."
+   },
+   {
+    "system": "orders",
+    "tool": "get_order",
+    "spec": "GET /orders/{order_id}",
+    "mutating": false,
+    "description": "Get one order by id, e.g. ORD-5001."
+   },
+   {
+    "system": "orders",
+    "tool": "create_order",
+    "spec": "POST /orders",
+    "mutating": true,
+    "description": "Place a new order. Required: customer_id (CUS-*), items (list of {sku, qty})."
+   },
+   {
+    "system": "orders",
+    "tool": "cancel_order",
+    "spec": "POST /orders/{order_id}/cancel",
+    "mutating": true,
+    "description": "Cancel an order that has not shipped yet."
+   },
+   {
+    "system": "orders",
+    "tool": "list_shipments",
+    "spec": "GET /shipments",
+    "mutating": false,
+    "description": "List all shipments with carrier, route, status, promised date and delay reason."
+   },
+   {
+    "system": "orders",
+    "tool": "list_delayed_shipments",
+    "spec": "GET /shipments/delayed",
+    "mutating": false,
+    "description": "Shipments that are currently delayed, with the reason for each delay."
+   },
+   {
+    "system": "orders",
+    "tool": "get_shipment",
+    "spec": "GET /shipments/{shipment_id}",
+    "mutating": false,
+    "description": "Get one shipment by id, e.g. SHP-1042."
+   },
+   {
+    "system": "orders",
+    "tool": "list_shipment_orders",
+    "spec": "GET /shipments/{shipment_id}/orders",
+    "mutating": false,
+    "description": "Orders (and therefore customers) carried by one shipment."
+   },
+   {
+    "system": "orders",
+    "tool": "reroute_shipment",
+    "spec": "POST /shipments/{shipment_id}/reroute",
+    "mutating": true,
+    "description": "Reroute a shipment to be fulfilled from a different warehouse. Required: shipment_id (path), from_warehouse_id (WH-*)."
+   },
+   {
+    "system": "tickets_fused",
+    "tool": "process_refund",
+    "spec": "POST /fused/process_refund",
+    "mutating": true,
+    "description": "Validate and issue a refund for a given ticket/order based on policy. Returns the refund record on success or an error dict on failure. Verified example call: {\"ticket_id\": \"TKT-9001\", \"order_id\": \"ORD-5001\", \"amount_inr\": 60600, \"reason\": \"late_delivery\", \"days_late\": 4}"
+   }
+  ],
+  "grafts": [
+   {
+    "system": "orders",
+    "exposed": [],
+    "server_endpoints": [
+     "GET /customers",
+     "GET /customers/{customer_id}",
+     "GET /customers/{customer_id}/orders",
+     "GET /orders",
+     "GET /orders/{order_id}",
+     "GET /shipments",
+     "GET /shipments/delayed",
+     "GET /shipments/{shipment_id}",
+     "GET /shipments/{shipment_id}/eta",
+     "GET /shipments/{shipment_id}/orders",
+     "POST /orders",
+     "POST /orders/{order_id}/cancel"
+    ]
+   },
+   {
+    "system": "inventory",
+    "exposed": [],
+    "server_endpoints": [
+     "GET /batches/expiring",
+     "GET /batches/expiring-within/{days}",
+     "GET /products",
+     "GET /products/{sku}",
+     "GET /products/{sku}/availability",
+     "GET /reservations",
+     "GET /stock",
+     "GET /stock/low",
+     "GET /warehouses",
+     "GET /warehouses/{warehouse_id}/stock"
+    ]
+   },
+   {
+    "system": "tickets",
+    "exposed": [],
+    "server_endpoints": [
+     "GET /customers/{customer_id}/tickets",
+     "GET /orders/{order_id}/tickets",
+     "GET /refunds",
+     "GET /tickets",
+     "GET /tickets/{ticket_id}"
+    ]
+   }
+  ],
+  "models": [
+   "groq:openai/gpt-oss-120b",
+   "groq:qwen/qwen3.8-27b",
+   "groq:openai/gpt-oss-20b",
+   "openrouter:nvidia/nemotron-3-ultra-550b-a55b:free",
+   "openrouter:google/gemma-4-31b-it:free"
+  ],
+  "busy": false
+ },
+ "events": [
+  {
+   "ts": 1795117062.6772468,
+   "kind": "ask",
+   "question": "Process a refund for ticket TKT-9002 (order ORD-5003, order value 35390 INR): the delivery was 4 days late.",
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "t": 0.0
+  },
+  {
+   "ts": 1795117065.583275,
+   "kind": "llm.rate_limited",
+   "model": "groq:openai/gpt-oss-120b",
+   "retry_after": 176.0,
+   "t": 2.906
+  },
+  {
+   "ts": 1795117065.6825728,
+   "kind": "llm.rate_limited",
+   "model": "groq:qwen/qwen3.8-27b",
+   "retry_after": 10.0,
+   "t": 3.005
+  },
+  {
+   "ts": 1795117066.8230467,
+   "kind": "step",
+   "step": "tool_use",
+   "name": "find_capability",
+   "input": {
+    "limit": 5,
+    "queries": [
+     "refund ticket",
+     "process refund",
+     "ticket refund"
+    ]
+   },
+   "t": 4.146
+  },
+  {
+   "ts": 1795117066.8452237,
+   "kind": "atlas.search",
+   "query": "refund ticket",
+   "hits": 5,
+   "t": 4.168
+  },
+  {
+   "ts": 1795117066.8526669,
+   "kind": "atlas.search",
+   "query": "process refund",
+   "hits": 5,
+   "t": 4.175
+  },
+  {
+   "ts": 1795117066.8577635,
+   "kind": "atlas.search",
+   "query": "ticket refund",
+   "hits": 5,
+   "t": 4.181
+  },
+  {
+   "ts": 1795117066.8597708,
+   "kind": "step",
+   "step": "tool_result",
+   "name": "find_capability",
+   "is_error": false,
+   "output": "{\"refund ticket\":[{\"system\":\"tickets_fused\",\"endpoint\":\"POST /fused/process_refund\",\"tool\":\"process_refund\",\"params\":[\"ticket_id\",\"order_id\",\"amount_inr\",\"reason\",\"days_late\"],\"changes_data\":true,\"about\":\"[VERIFIED ONE-STEP WORKFLOW] Validate and issue a refund for a given ticket/order based on\"},{\"system\":\"tickets\",\"endpoint\":\"GET /refunds\",\"tool\":\"list_refunds\",\"params\":[],\"changes_data\":false,\"",
+   "t": 4.183
+  },
+  {
+   "ts": 1795117067.0784154,
+   "kind": "llm.rate_limited",
+   "model": "groq:openai/gpt-oss-20b",
+   "retry_after": 639.0,
+   "t": 4.401
+  },
+  {
+   "ts": 1795117069.553024,
+   "kind": "prewarm",
+   "system": "roster",
+   "endpoints": 6,
+   "ms": 27545,
+   "t": 6.876
+  },
+  {
+   "ts": 1795117072.0830572,
+   "kind": "step",
+   "step": "tool_use",
+   "name": "graft",
+   "input": {
+    "grafts": [
+     {
+      "system": "tickets_fused",
+      "endpoints": [
+       "POST /fused/process_refund"
+      ],
+      "reason": "Process refund for TKT-9002 (ORD-5003) due to 4-day late delivery"
+     }
+    ]
+   },
+   "t": 9.406
+  },
+  {
+   "ts": 1795117072.0840511,
+   "kind": "approval.request",
+   "id": 1,
+   "what": "graft",
+   "detail": {
+    "system": "tickets_fused",
+    "endpoints": [
+     "POST /fused/process_refund"
+    ],
+    "reason": "Process refund for TKT-9002 (ORD-5003) due to 4-day late delivery"
+   },
+   "t": 9.407
+  },
+  {
+   "ts": 1795117073.2297752,
+   "kind": "approval.resolved",
+   "id": 1,
+   "approved": true,
+   "t": 10.553
+  },
+  {
+   "ts": 1795117073.2307906,
+   "kind": "graft.start",
+   "system": "tickets_fused",
+   "endpoints": [
+    "POST /fused/process_refund"
+   ],
+   "reason": "Process refund for TKT-9002 (ORD-5003) due to 4-day late delivery",
+   "t": 10.554
+  },
+  {
+   "ts": 1795117079.1280499,
+   "kind": "graft.done",
+   "system": "tickets_fused",
+   "endpoints": [
+    "POST /fused/process_refund"
+   ],
+   "tools": [
+    "process_refund"
+   ],
+   "how": "connected_cached_server",
+   "build_ms": 0,
+   "connect_ms": 5879,
+   "live_tools": 1,
+   "t": 16.451
+  },
+  {
+   "ts": 1795117079.1384716,
+   "kind": "step",
+   "step": "tool_result",
+   "name": "graft",
+   "is_error": false,
+   "output": "[{\"system\":\"tickets_fused\",\"live_tools_for_system\":[\"tickets_fused__process_refund\"],\"how\":\"connected_cached_server\",\"synapse_build_ms\":0,\"live_tools_total\":1}]",
+   "t": 16.461
+  },
+  {
+   "ts": 1795117079.681104,
+   "kind": "llm.tool_call_rejected",
+   "error": "Error code: 400 - {'error': {'message': \"tool call validation failed: attempted to call tool 'tickets_fused__processowned' which was not in request.tools\", 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': '<tool_call>\\n<function=tickets_fused__processowned>\\n<paramete",
+   "t": 17.004
+  },
+  {
+   "ts": 1795117079.6817055,
+   "kind": "llm.waiting",
+   "seconds": 2.0,
+   "for_model": "groq:qwen/qwen3.8-27b",
+   "t": 17.004
+  },
+  {
+   "ts": 1795117081.678263,
+   "kind": "llm.waiting",
+   "seconds": 0.0,
+   "for_model": "groq:qwen/qwen3.8-27b",
+   "t": 19.001
+  },
+  {
+   "ts": 1795117081.9789555,
+   "kind": "llm.rate_limited",
+   "model": "groq:qwen/qwen3.8-27b",
+   "retry_after": 28.0,
+   "t": 19.302
+  },
+  {
+   "ts": 1795117084.4507298,
+   "kind": "step",
+   "step": "tool_use",
+   "name": "tickets_fused__process_refund",
+   "input": {
+    "ticket_id": "TKT-9002",
+    "order_id": "ORD-5003",
+    "amount_inr": 35390,
+    "reason": "Delivery was 4 days late",
+    "days_late": 4
+   },
+   "t": 21.773
+  },
+  {
+   "ts": 1795117084.451435,
+   "kind": "approval.request",
+   "id": 2,
+   "what": "call",
+   "detail": {
+    "system": "tickets_fused",
+    "tool": "process_refund",
+    "endpoint": "POST /fused/process_refund",
+    "args": {
+     "ticket_id": "TKT-9002",
+     "order_id": "ORD-5003",
+     "amount_inr": 35390,
+     "reason": "Delivery was 4 days late",
+     "days_late": 4
+    }
+   },
+   "t": 21.774
+  },
+  {
+   "ts": 1795117085.57472,
+   "kind": "approval.resolved",
+   "id": 2,
+   "approved": true,
+   "t": 22.897
+  },
+  {
+   "ts": 1795117085.5777097,
+   "kind": "approval",
+   "system": "tickets_fused",
+   "tool": "process_refund",
+   "approved": true,
+   "t": 22.9
+  },
+  {
+   "ts": 1795117085.5787153,
+   "kind": "tool.call",
+   "system": "tickets_fused",
+   "tool": "process_refund",
+   "args": {
+    "ticket_id": "TKT-9002",
+    "order_id": "ORD-5003",
+    "amount_inr": 35390,
+    "reason": "Delivery was 4 days late",
+    "days_late": 4
+   },
+   "t": 22.901
+  },
+  {
+   "ts": 1795117085.5896316,
+   "kind": "tool.result",
+   "system": "tickets_fused",
+   "tool": "process_refund",
+   "ok": true,
+   "ms": 10,
+   "chars": 52,
+   "t": 22.912
+  },
+  {
+   "ts": 1795117085.5906293,
+   "kind": "step",
+   "step": "tool_result",
+   "name": "tickets_fused__process_refund",
+   "is_error": false,
+   "output": "{\"error\":\"invalid reason: Delivery was 4 days late\"}",
+   "t": 22.913
+  },
+  {
+   "ts": 1795117089.0918503,
+   "kind": "step",
+   "step": "tool_use",
+   "name": "tickets_fused__process_refund",
+   "input": {
+    "ticket_id": "TKT-9002",
+    "order_id": "ORD-5003",
+    "amount_inr": 35390,
+    "reason": "late_delivery",
+    "days_late": 4
+   },
+   "t": 26.415
+  },
+  {
+   "ts": 1795117089.0928612,
+   "kind": "approval.request",
+   "id": 3,
+   "what": "call",
+   "detail": {
+    "system": "tickets_fused",
+    "tool": "process_refund",
+    "endpoint": "POST /fused/process_refund",
+    "args": {
+     "ticket_id": "TKT-9002",
+     "order_id": "ORD-5003",
+     "amount_inr": 35390,
+     "reason": "late_delivery",
+     "days_late": 4
+    }
+   },
+   "t": 26.416
+  },
+  {
+   "ts": 1795117090.1793823,
+   "kind": "approval.resolved",
+   "id": 3,
+   "approved": true,
+   "t": 27.502
+  },
+  {
+   "ts": 1795117090.1809988,
+   "kind": "approval",
+   "system": "tickets_fused",
+   "tool": "process_refund",
+   "approved": true,
+   "t": 27.504
+  },
+  {
+   "ts": 1795117090.182113,
+   "kind": "tool.call",
+   "system": "tickets_fused",
+   "tool": "process_refund",
+   "args": {
+    "ticket_id": "TKT-9002",
+    "order_id": "ORD-5003",
+    "amount_inr": 35390,
+    "reason": "late_delivery",
+    "days_late": 4
+   },
+   "t": 27.505
+  },
+  {
+   "ts": 1795117090.1988137,
+   "kind": "tool.result",
+   "system": "tickets_fused",
+   "tool": "process_refund",
+   "ok": true,
+   "ms": 17,
+   "chars": 131,
+   "t": 27.522
+  },
+  {
+   "ts": 1795117090.199824,
+   "kind": "step",
+   "step": "tool_result",
+   "name": "tickets_fused__process_refund",
+   "is_error": false,
+   "output": "{\"refund_id\":\"RF-3001\",\"ticket_id\":\"TKT-9002\",\"order_id\":\"ORD-5003\",\"amount_inr\":8847.5,\"reason\":\"late_delivery\",\"status\":\"issued\"}",
+   "t": 27.523
+  },
+  {
+   "ts": 1795117094.3779054,
+   "kind": "step",
+   "step": "text",
+   "text": "Refund processed successfully:\n- **Refund ID**: RF-3001\n- **Ticket**: TKT-9002 (Order ORD-5003)\n- **Amount**: 8,847.5 INR (25% of 35,390 INR order value)\n- **Reason**: late_delivery (4 days late)\n- **Status**: issued\n\nNext step: Notify the customer that refund RF-3001 has been issued for the 4-day late delivery on order ORD-5003.",
+   "t": 31.701
+  },
+  {
+   "ts": 1795117094.3826227,
+   "kind": "prune",
+   "system": "tickets_fused",
+   "tools": [
+    "process_refund"
+   ],
+   "live_tools": 0,
+   "t": 31.705
+  },
+  {
+   "ts": 1795117094.383178,
+   "kind": "answer",
+   "question": "Process a refund for ticket TKT-9002 (order ORD-5003, order value 35390 INR): the delivery was 4 days late.",
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "turns": 6,
+   "tool_calls": 4,
+   "grafts": 1,
+   "peak_live_tools": 1,
+   "seconds": 31.7,
+   "input_tokens": 10824,
+   "output_tokens": 846,
+   "t": 31.706
+  },
+  {
+   "ts": 1795117094.383178,
+   "kind": "answer.text",
+   "question": "Process a refund for ticket TKT-9002 (order ORD-5003, order value 35390 INR): the delivery was 4 days late.",
+   "text": "Refund processed successfully:\n- **Refund ID**: RF-3001\n- **Ticket**: TKT-9002 (Order ORD-5003)\n- **Amount**: 8,847.5 INR (25% of 35,390 INR order value)\n- **Reason**: late_delivery (4 days late)\n- **Status**: issued\n\nNext step: Notify the customer that refund RF-3001 has been issued for the 4-day late delivery on order ORD-5003.",
+   "turns": 6,
+   "tool_calls": 4,
+   "grafts": 1,
+   "peak_live_tools": 1,
+   "seconds": 31.7,
+   "tokens": 11670,
+   "models": [
+    "groq:openai/gpt-oss-20b",
+    "openrouter:nvidia/nemotron-3-ultra-550b-a55b:free"
+   ],
+   "t": 31.706
+  }
+ ]
+}

@@ -45,18 +45,29 @@ export async function prewarm() {
 }
 
 /** Subscribe to the agent's live event stream (Server-Sent Events). */
-export function useAgentEvents(onEvent: (e: AgentEvent) => void) {
+export function useAgentEvents(onEvent: (e: AgentEvent) => void, enabled = true) {
   const handler = useRef(onEvent);
   useEffect(() => { handler.current = onEvent; });
   const [connected, setConnected] = useState(false);
   useEffect(() => {
+    if (!enabled) return;
     const es = new EventSource(`${API}/api/events`);
     es.onopen = () => setConnected(true);
     es.onerror = () => setConnected(false);
     es.onmessage = (m) => {
       try { handler.current(JSON.parse(m.data)); } catch { /* ignore malformed */ }
     };
-    return () => es.close();
-  }, []);
+    return () => { es.close(); setConnected(false); };
+  }, [enabled]);
   return connected;
+}
+
+export type ReplayMeta = { id: string; title: string; blurb: string; question: string };
+export type Replay = ReplayMeta & { recorded_at: string; state: AgentState; events: (AgentEvent & { t: number })[] };
+
+export async function listReplays(): Promise<ReplayMeta[]> {
+  try { const r = await fetch("/replays/index.json", { cache: "no-store" }); return r.ok ? await r.json() : []; } catch { return []; }
+}
+export async function loadReplay(id: string): Promise<Replay | null> {
+  try { const r = await fetch(`/replays/${id}.json`, { cache: "no-store" }); return r.ok ? await r.json() : null; } catch { return null; }
 }

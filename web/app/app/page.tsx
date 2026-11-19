@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Console } from "@/components/console/Console";
 
-export const metadata: Metadata = { title: "Live console · Synaptogenesis" };
+export const metadata: Metadata = { title: "App · Synaptogenesis" };
 
-export default function ConsolePage() {
+export default function AppPage() {
   return <Console />;
 }

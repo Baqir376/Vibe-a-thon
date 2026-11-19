@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion, useMotionValueEvent, useScroll } from "motion/react";
 import { useState } from "react";
 import { LogoMark, Wordmark } from "@/components/Logo";
+import { Magnetic } from "@/components/fx/Interactions";
 
 export function Nav() {
   const { scrollY } = useScroll();
@@ -17,15 +18,18 @@ export function Nav() {
       <div className={`flex w-full max-w-5xl items-center justify-between rounded-full px-4 py-2 transition-all duration-500 ${scrolled ? "glass shadow-[0_8px_40px_rgba(0,0,0,.45)]" : "border border-transparent"}`}>
         <Link href="/" className="flex items-center gap-2"><LogoMark size={26} /><Wordmark className="text-[17px]" /></Link>
         <div className="hidden items-center gap-7 text-sm text-muted md:flex">
+          <a href="#preview" className="transition hover:text-text">The app</a>
           <a href="#how" className="transition hover:text-text">How it works</a>
           <a href="#capabilities" className="transition hover:text-text">Capabilities</a>
           <a href="#proof" className="transition hover:text-text">Proof</a>
         </div>
-        <Link href="/console"
-          className="group relative overflow-hidden rounded-full bg-violet px-4 py-1.5 text-sm font-semibold text-[#160d33] transition hover:shadow-[0_0_30px_rgba(167,139,250,.55)]">
-          <span className="relative z-10">Live console →</span>
-          <span className="shimmer absolute inset-0" />
-        </Link>
+        <Magnetic strength={0.2}>
+          <Link href="/app" data-cursor="Launch"
+            className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full bg-white px-5 py-2 text-sm font-semibold text-black transition-shadow hover:shadow-[0_0_34px_rgba(196,181,253,.6)]">
+            <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-live opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" /></span>
+            Launch app
+          </Link>
+        </Magnetic>
       </div>
     </motion.nav>
   );

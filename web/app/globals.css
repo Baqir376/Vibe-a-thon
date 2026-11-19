@@ -14,7 +14,7 @@
   --color-live: #6ef2c0;
   --color-drift: #ffd84d;
   --color-danger: #ff6b81;
-  --font-display: var(--font-jakarta);
+  --font-display: var(--font-inter-tight);
   --font-sans: var(--font-inter);
   --font-mono: var(--font-jetbrains);
 }
@@ -82,3 +82,12 @@ body {
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
   .grain::after { display: none; }
 }
+
+/* custom cursor (fine pointers only; text fields keep the caret) */
+html.custom-cursor, html.custom-cursor * { cursor: none !important; }
+html.custom-cursor input, html.custom-cursor textarea, html.custom-cursor [contenteditable] { cursor: text !important; }
+
+/* Lenis */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-stopped { overflow: hidden; }

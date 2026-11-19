@@ -230,6 +230,7 @@ class Agent:
         from openai import BadRequestError
         messages = [{"role": "system", "content": STATIC_PROMPT if self.static else SYSTEM_PROMPT}] + list(history) +                    [{"role": "user", "content": question}]
         rejected = 0
+        nudged = False
         while stats.turns < MAX_TURNS:
             stats.turns += 1
             tools = [{"type": "function", "function": {"name": t["name"], "description": t["description"][:1000],
@@ -271,7 +272,13 @@ class Agent:
             if msg.content and msg.content.strip():
                 self.on_step("text", {"text": msg.content})
             if not calls:
-                stats.answer = msg.content or ""
+                if not (msg.content or "").strip() and not nudged:
+                    # Some free models end a turn with no text; ask once for the answer instead of returning nothing.
+                    nudged = True
+                    messages.append({"role": "user", "content": "(harness) You stopped without an answer. Give the final answer now, "
+                                                                "based only on the tool results above."})
+                    continue
+                stats.answer = msg.content or "(The model returned no answer.)"
                 return
             async def run_call(c):
                 try:

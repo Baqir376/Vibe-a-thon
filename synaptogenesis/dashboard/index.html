@@ -305,7 +305,7 @@ async function onEvent(ev) {
   else if (k === "tool.result" && !ev.ok) { log(`  ✖ ${ev.system}.${ev.tool} failed`, "r"); }
   else if (k === "graft.denied") { log(`⛔ policy blocked ${ev.system}:${ev.endpoint}`, "r"); const p = S.sysPos[ev.system]; p && floater(p.x, p.y - 48, "policy: denied", "#ff6b81"); }
   else if (k === "graft.declined") { log(`✋ human declined write access: ${ev.endpoints.join(", ")}`, "r"); }
-  else if (k === "approval.request") { showApproval(ev); log(`⚠ approval requested (${ev.kind})`, "w"); }
+  else if (k === "approval.request") { showApproval(ev); log(`⚠ approval requested (${ev.what})`, "w"); }
   else if (k === "approval.resolved") { $("modal").classList.remove("on"); log(`  approval ${ev.approved ? "granted" : "declined"}`, ev.approved ? "g" : "r"); }
   else if (k === "drift.detected") { log(`◎ Sentinel: code changed in ${ev.system} → synapse build --discover`, "d"); ring(ev.system, "var(--drift)"); }
   else if (k === "drift") { onDrift(ev); }
@@ -357,9 +357,9 @@ let pendingApproval = null;
 function showApproval(ev) {
   pendingApproval = ev.id;
   const d = ev.detail || {};
-  $("mTitle").textContent = ev.kind === "graft" ? "Grant write access?" : "Allow this action?";
-  $("mSub").textContent = ev.kind === "graft" ? `The agent wants Synapse to graft data-changing endpoints of ${d.system}.` : `${d.system} · ${d.endpoint}`;
-  $("mBody").textContent = JSON.stringify(ev.kind === "graft" ? { endpoints: d.endpoints, reason: d.reason } : d.args, null, 2);
+  $("mTitle").textContent = ev.what === "graft" ? "Grant write access?" : "Allow this action?";
+  $("mSub").textContent = ev.what === "graft" ? `The agent wants Synapse to graft data-changing endpoints of ${d.system}.` : `${d.system} · ${d.endpoint}`;
+  $("mBody").textContent = JSON.stringify(ev.what === "graft" ? { endpoints: d.endpoints, reason: d.reason } : d.args, null, 2);
   $("modal").classList.add("on");
 }
 async function resolve(ok) { if (pendingApproval == null) return;

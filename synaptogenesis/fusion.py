@@ -64,8 +64,12 @@ def load_into(systems: dict[str, System], atlas: Atlas) -> None:
                 cap = atlas.lookup(base_name, step)
                 if cap and cap.mutating:
                     atlas.superseded.add((base_name, step))
+        def describe(t: dict) -> str:
+            # The sandbox verification proved one call works; show it so agents use valid values.
+            example = (t.get("verified") or {}).get("replay_args")
+            return t["description"] + (f" Verified example call: {json.dumps(example)}" if example else "")
         atlas.caps = [c for c in atlas.caps if c.system != fs.name] + [
-            Capability(fs.name, name, "POST", f"/fused/{name}", t["description"], t["params"]) for name, t in tools.items()]
+            Capability(fs.name, name, "POST", f"/fused/{name}", describe(t), t["params"]) for name, t in tools.items()]
 
 
 def server_file(system: str, tool: str) -> str | None:

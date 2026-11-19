@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { animate, motion, useInView } from "motion/react";
 import { useEffect, useRef, useState } from "react";
+import { Magnetic } from "@/components/fx/Interactions";
 
 function Count({ to, decimals = 0, suffix = "" }: { to: number; decimals?: number; suffix?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
@@ -93,9 +94,11 @@ export function FinalCTA() {
         className="relative mx-auto max-w-3xl text-center">
         <h2 className="font-display text-5xl font-extrabold tracking-tight sm:text-6xl">Watch it <span className="text-gradient">grow.</span></h2>
         <p className="mx-auto mt-5 max-w-xl text-lg text-muted">Ask a question that spans four legacy systems. Watch Synapse build the connections, the agent use them, and the access disappear.</p>
-        <Link href="/console" className="mt-9 inline-flex items-center gap-2 rounded-2xl bg-violet px-8 py-4 text-lg font-semibold text-[#160d33] transition hover:shadow-[0_0_60px_rgba(167,139,250,.6)]">
-          Open the live console →
-        </Link>
+        <div className="mt-9"><Magnetic>
+          <Link href="/app" data-cursor="Launch" className="inline-flex items-center gap-2 rounded-full bg-white px-9 py-4 text-lg font-semibold text-black transition-shadow hover:shadow-[0_0_60px_rgba(196,181,253,.6)]">
+            Launch the app →
+          </Link>
+        </Magnetic></div>
       </motion.div>
       <footer className="relative mx-auto mt-28 flex max-w-6xl flex-wrap items-center justify-between gap-4 border-t border-line pt-6 text-xs text-muted">
         <span>Synaptogenesis · Vibe-a-thon 2026 · 2nd Brain Labs × Geek Room</span>

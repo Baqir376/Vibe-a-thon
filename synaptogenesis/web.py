@@ -62,7 +62,7 @@ async def web_approver(kind: str, detail: dict) -> bool:
     aid = next(_ids)
     fut: asyncio.Future = asyncio.get_running_loop().create_future()
     pending[aid] = fut
-    events.emit("approval.request", id=aid, kind=kind, detail=detail)
+    events.emit("approval.request", id=aid, what=kind, detail=detail)
     try:
         ok = await asyncio.wait_for(fut, timeout=180)
     except asyncio.TimeoutError:

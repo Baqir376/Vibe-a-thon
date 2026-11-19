@@ -1,0 +1,20 @@
+[
+ {
+  "id": "delayed",
+  "title": "Delayed shipment impact",
+  "blurb": "One question spans orders, tickets and the on-call roster. Watch three systems get grafted and pruned.",
+  "question": "The insulin shipment to Pune is delayed. Which customers are affected, have they raised support tickets, and who is on call to handle it?"
+ },
+ {
+  "id": "refund",
+  "title": "Process a refund",
+  "blurb": "Uses the verified tool Synapse fused from the refund workflow. Every data change asks a human first.",
+  "question": "Process a refund for ticket TKT-9002 (order ORD-5003, order value 35390 INR): the delivery was 4 days late."
+ },
+ {
+  "id": "live-update",
+  "title": "Live update (Drift Sentinel)",
+  "blurb": "A developer ships a new endpoint. The Sentinel reruns synapse --discover and the agent uses it straight away.",
+  "question": "Is there a revised delivery ETA for the delayed Pune insulin shipment SHP-1042? Answer in 2 lines."
+ }
+]

@@ -2,24 +2,26 @@
 
 import { AnimatePresence, motion, useInView } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Tilt } from "@/components/fx/Interactions";
 
 function Card({ className = "", title, kicker, children, delay = 0 }: { className?: string; title: string; kicker: string; children: ReactNode; delay?: number }) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ x: -400, y: -400 });
   return (
+    <Tilt className={className} max={6}>
     <motion.div ref={ref}
       initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-80px" }}
       transition={{ duration: 0.7, delay, ease: [0.22, 1, 0.36, 1] }}
-      whileHover={{ y: -4 }}
       onPointerMove={(e) => { const r = ref.current!.getBoundingClientRect(); setPos({ x: e.clientX - r.left, y: e.clientY - r.top }); }}
       onPointerLeave={() => setPos({ x: -400, y: -400 })}
-      className={`glass group relative overflow-hidden rounded-3xl p-6 ${className}`}>
+      className="glass group relative h-full overflow-hidden rounded-3xl p-6">
       <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
         style={{ background: `radial-gradient(420px circle at ${pos.x}px ${pos.y}px, rgba(167,139,250,.14), transparent 45%)` }} />
       <p className="font-mono text-[11px] tracking-[0.25em] text-violet uppercase">{kicker}</p>
       <h3 className="mt-2 font-display text-xl font-semibold tracking-tight">{title}</h3>
-      <div className="relative mt-5">{children}</div>
+      <div className="relative mt-5" style={{ transform: "translateZ(30px)" }}>{children}</div>
     </motion.div>
+    </Tilt>
   );
 }
 

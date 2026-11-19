@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useReducer } from "react";
-import { getState, useAgentEvents, type AgentEvent, type AgentState, type Capability, type System } from "./api";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { getState, loadReplay, useAgentEvents, type AgentEvent, type AgentState, type Capability, type System } from "./api";
 
 export type Phase = "offline" | "idle" | "thinking" | "searching" | "building" | "calling" | "approval" | "pruning" | "fusing" | "sentinel" | "done" | "error";
 export type Tone = "violet" | "live" | "read" | "write" | "drift" | "danger" | "muted";
@@ -40,7 +40,8 @@ type Action =
   | { type: "dismissToast"; id: number }
   | { type: "dropPulse"; id: number }
   | { type: "offline" }
-  | { type: "local"; question: string };
+  | { type: "local"; question: string }
+  | { type: "reset"; s: AgentState; status?: string };
 
 let uid = 1;
 const initial: ConsoleState = {
@@ -62,6 +63,7 @@ function reduce(s: ConsoleState, a: Action): ConsoleState {
   if (a.type === "offline") return { ...s, phase: "offline", status: "Agent server offline: run  python -m synaptogenesis web" };
   if (a.type === "dismissToast") return { ...s, toasts: s.toasts.filter((t) => t.id !== a.id) };
   if (a.type === "dropPulse") return { ...s, pulses: s.pulses.filter((p) => p.id !== a.id) };
+  if (a.type === "reset") return { ...initial, systems: a.s.systems, caps: a.s.capabilities, models: a.s.models, phase: "idle", status: a.status ?? "Replaying a recorded run" };
   if (a.type === "local") return { ...s, question: a.question, answer: "", meta: "", busy: true, phase: "thinking", status: "Thinking…" };
   if (a.type === "state") {
     const live = a.s.grafts.flatMap((g) => g.exposed.map((sp) => key(g.system, sp)));
@@ -104,8 +106,8 @@ function reduce(s: ConsoleState, a: Action): ConsoleState {
                lines: push(s, "muted", "✂", `prune ${e.system}`, "dormant · instant to reactivate") };
     }
     case "approval.request":
-      return { ...s, phase: "approval", status: "Waiting for a human", approvals: [...s.approvals, { id: e.id, kind: e.kind, detail: e.detail }],
-               lines: push(s, "write", "⚠", `approval needed: ${e.kind}`, e.detail?.endpoint ?? (e.detail?.endpoints ?? []).join(", ")) };
+      return { ...s, phase: "approval", status: "Waiting for a human", approvals: [...s.approvals, { id: e.id, kind: e.what, detail: e.detail }],
+               lines: push(s, "write", "⚠", `approval needed: ${e.what}`, e.detail?.endpoint ?? (e.detail?.endpoints ?? []).join(", ")) };
     case "approval.resolved":
       return { ...s, approvals: s.approvals.filter((x) => x.id !== e.id), lines: push(s, e.approved ? "live" : "danger", e.approved ? "✓" : "✋", e.approved ? "approved by human" : "declined by human") };
     case "graft.denied":
@@ -146,19 +148,66 @@ function reduce(s: ConsoleState, a: Action): ConsoleState {
   }
 }
 
+export type Mode = "checking" | "live" | "replay";
+
 export function useConsole() {
   const [s, dispatch] = useReducer(reduce, initial);
+  const [mode, setMode] = useState<Mode>("checking");
+  const [serverUp, setServerUp] = useState(false);
+  const [replaying, setReplaying] = useState<string | null>(null);
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
   const refresh = useCallback(async () => {
     const st = await getState();
-    dispatch(st ? { type: "state", s: st } : { type: "offline" });
+    setServerUp(!!st);
+    if (st) dispatch({ type: "state", s: st });
+    return st;
   }, []);
+
+  // Live when the agent server answers, otherwise Replay (e.g. a judge opening the deployed site).
+  useEffect(() => {
+    // Syncing with an external system (the agent server) after an async check: state is set in the callback.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    refresh().then((st) => setMode((m) => (m === "checking" ? (st ? "live" : "replay") : m)));
+  }, [refresh]);
+
   const connected = useAgentEvents((e) => {
     dispatch({ type: "event", e });
     if (e.kind === "drift" || e.kind === "fusion.wired") refresh();
-  });
-  useEffect(() => { refresh(); }, [refresh, connected]);
+  }, mode === "live");
+
+  const stopReplay = useCallback(() => { timers.current.forEach(clearTimeout); timers.current = []; setReplaying(null); }, []);
+
+  /** Play a recorded run with its real rhythm; long model waits are compressed, approvals held long enough to read. */
+  const playReplay = useCallback(async (id: string) => {
+    stopReplay();
+    const rp = await loadReplay(id);
+    if (!rp) return false;
+    setReplaying(id);
+    dispatch({ type: "reset", s: rp.state });
+    let at = 400, prev = rp.events[0]?.t ?? 0, prevKind = "";
+    for (const e of rp.events) {
+      const gap = Math.max(0, e.t - prev);
+      at += Math.min(gap * 1000, 2200) + (prevKind === "approval.request" ? 1800 : 0);
+      prev = e.t; prevKind = e.kind;
+      timers.current.push(setTimeout(() => dispatch({ type: "event", e }), at));
+    }
+    timers.current.push(setTimeout(() => setReplaying(null), at + 200));
+    return true;
+  }, [stopReplay]);
+
+  useEffect(() => () => stopReplay(), [stopReplay]);
+
+  /** Replay mode with no server: show the recorded company (systems + endpoints) ready to play. */
+  const primeReplay = useCallback(async () => {
+    const rp = await loadReplay("delayed");
+    if (rp) dispatch({ type: "reset", s: rp.state, status: "Replay mode · pick a scenario" });
+  }, []);
+
   return {
-    s, connected,
+    s, connected, mode, serverUp, replaying,
+    setMode: (m: Mode) => { stopReplay(); setMode(m); if (m === "live") refresh(); },
+    playReplay, stopReplay, refresh, primeReplay,
     local: (question: string) => dispatch({ type: "local", question }),
     dismissToast: (id: number) => dispatch({ type: "dismissToast", id }),
     dropPulse: (id: number) => dispatch({ type: "dropPulse", id }),

@@ -1,0 +1,668 @@
+{
+ "id": "live-update",
+ "title": "Live update (Drift Sentinel)",
+ "blurb": "A developer ships a new endpoint. The Sentinel reruns synapse --discover and the agent uses it straight away.",
+ "question": "Is there a revised delivery ETA for the delayed Pune insulin shipment SHP-1042? Answer in 2 lines.",
+ "recorded_at": "2026-11-20 00:35",
+ "state": {
+  "systems": [
+   {
+    "name": "orders",
+    "mode": "hosted",
+    "description": "Customers (clinics, pharmacies), their orders, and shipments - carrier, delays and delay reasons, rerouting. Python/FastAPI."
+   },
+   {
+    "name": "inventory",
+    "mode": "local",
+    "description": "Warehouse stock per SKU, low-stock alerts, expiring batches, stock reservations, draft purchase orders. Python/FastAPI."
+   },
+   {
+    "name": "tickets",
+    "mode": "local",
+    "description": "Customer support tickets, comments, ticket status, refunds under the refund policy. Python/FastAPI."
+   },
+   {
+    "name": "roster",
+    "mode": "hosted",
+    "description": "Staff, account managers per customer, who is on call per region/team, paging staff. Python/FastAPI."
+   },
+   {
+    "name": "tickets_fused",
+    "mode": "fused",
+    "description": "Verified one-step workflow tools composed by Synapse Custom mode from tickets's internal functions."
+   }
+  ],
+  "capabilities": [
+   {
+    "system": "inventory",
+    "tool": "list_products",
+    "spec": "GET /products",
+    "mutating": false,
+    "description": "List every product in the catalogue with price and cold-chain flag."
+   },
+   {
+    "system": "inventory",
+    "tool": "get_product",
+    "spec": "GET /products/{sku}",
+    "mutating": false,
+    "description": "Get one product by SKU."
+   },
+   {
+    "system": "inventory",
+    "tool": "list_warehouses",
+    "spec": "GET /warehouses",
+    "mutating": false,
+    "description": "List warehouses with city, region and whether they have cold storage."
+   },
+   {
+    "system": "inventory",
+    "tool": "get_stock",
+    "spec": "GET /stock",
+    "mutating": false,
+    "description": "Available stock (on hand minus reservations) per warehouse and SKU. Filter by warehouse_id and/or sku."
+   },
+   {
+    "system": "inventory",
+    "tool": "get_low_stock",
+    "spec": "GET /stock/low",
+    "mutating": false,
+    "description": "Items whose available stock is below the reorder threshold, with the shortfall."
+   },
+   {
+    "system": "inventory",
+    "tool": "get_warehouse_stock",
+    "spec": "GET /warehouses/{warehouse_id}/stock",
+    "mutating": false,
+    "description": "Available stock of every SKU in one warehouse (e.g. WH-PUNE)."
+   },
+   {
+    "system": "inventory",
+    "tool": "get_sku_availability",
+    "spec": "GET /products/{sku}/availability",
+    "mutating": false,
+    "description": "Where a SKU is available: stock per warehouse, so shortages can be covered from another warehouse."
+   },
+   {
+    "system": "inventory",
+    "tool": "get_expiring_batches",
+    "spec": "GET /batches/expiring",
+    "mutating": false,
+    "description": "Batches that expire within the given number of days."
+   },
+   {
+    "system": "inventory",
+    "tool": "get_batches_expiring_within",
+    "spec": "GET /batches/expiring-within/{days}",
+    "mutating": false,
+    "description": "Batches that expire within the given number of days (path form)."
+   },
+   {
+    "system": "inventory",
+    "tool": "create_reservation",
+    "spec": "POST /reservations",
+    "mutating": true,
+    "description": "Reserve stock for a customer order. Required: warehouse_id (WH-PUNE|WH-MUM|WH-BLR), sku, qty (integer), order_id (ORD-*). Fails if not enough is available."
+   },
+   {
+    "system": "inventory",
+    "tool": "list_reservations",
+    "spec": "GET /reservations",
+    "mutating": false,
+    "description": "List stock reservations, optionally for one order."
+   },
+   {
+    "system": "inventory",
+    "tool": "create_purchase_order",
+    "spec": "POST /purchase-orders",
+    "mutating": true,
+    "description": "Create a DRAFT purchase order to restock a warehouse (not sent to suppliers). Required: warehouse_id (WH-*), lines (list of {sku, qty}). Optional: note."
+   },
+   {
+    "system": "tickets",
+    "tool": "list_tickets",
+    "spec": "GET /tickets",
+    "mutating": false,
+    "description": "List support tickets. Filter by customer_id, order_id and/or status."
+   },
+   {
+    "system": "tickets",
+    "tool": "list_customer_tickets",
+    "spec": "GET /customers/{customer_id}/tickets",
+    "mutating": false,
+    "description": "All support tickets raised by one customer (e.g. CUS-101), any status."
+   },
+   {
+    "system": "tickets",
+    "tool": "list_order_tickets",
+    "spec": "GET /orders/{order_id}/tickets",
+    "mutating": false,
+    "description": "All support tickets that reference one order (e.g. ORD-5001)."
+   },
+   {
+    "system": "tickets",
+    "tool": "get_ticket",
+    "spec": "GET /tickets/{ticket_id}",
+    "mutating": false,
+    "description": "Get one ticket with its comment thread."
+   },
+   {
+    "system": "tickets",
+    "tool": "create_ticket",
+    "spec": "POST /tickets",
+    "mutating": true,
+    "description": "Open a new support ticket. Required: customer_id (CUS-*), subject. Optional: priority (low|medium|high|urgent, default medium), order_id (ORD-*)."
+   },
+   {
+    "system": "tickets",
+    "tool": "add_comment",
+    "spec": "POST /tickets/{ticket_id}/comments",
+    "mutating": true,
+    "description": "Add a comment to a ticket (e.g. an update to the customer). Required: ticket_id (path), author (e.g. \"support\"), text."
+   },
+   {
+    "system": "tickets",
+    "tool": "set_ticket_status",
+    "spec": "PATCH /tickets/{ticket_id}/status",
+    "mutating": true,
+    "description": "Change a ticket's status. Required: ticket_id (path), status (open|pending|resolved|closed)."
+   },
+   {
+    "system": "tickets",
+    "tool": "create_refund",
+    "spec": "POST /refunds",
+    "mutating": true,
+    "description": "Issue a refund for a ticket; the refund policy computes the refundable amount. Required: ticket_id (TKT-*), order_id (ORD-*), amount_inr (the FULL order value, number), reason (exactly one of: late_delivery, damaged, wrong_item, cold_chain_breach, other). For late_delivery also pass days_late (integer). Refuses duplicates and amounts above the auto-refund limit."
+   },
+   {
+    "system": "tickets",
+    "tool": "list_refunds",
+    "spec": "GET /refunds",
+    "mutating": false,
+    "description": "List refunds already issued, optionally for one ticket."
+   },
+   {
+    "system": "roster",
+    "tool": "list_staff",
+    "spec": "GET /staff",
+    "mutating": false,
+    "description": "List all staff with team, region, role and the customer accounts they manage."
+   },
+   {
+    "system": "roster",
+    "tool": "get_staff",
+    "spec": "GET /staff/{staff_id}",
+    "mutating": false,
+    "description": "Get one staff member by id, e.g. EMP-21."
+   },
+   {
+    "system": "roster",
+    "tool": "get_account_manager",
+    "spec": "GET /customers/{customer_id}/account-manager",
+    "mutating": false,
+    "description": "The account manager responsible for a customer, e.g. CUS-101."
+   },
+   {
+    "system": "roster",
+    "tool": "get_oncall",
+    "spec": "GET /oncall/{region}",
+    "mutating": false,
+    "description": "Who is on call today in a region (west, south), for every team."
+   },
+   {
+    "system": "roster",
+    "tool": "page_staff",
+    "spec": "POST /pages",
+    "mutating": true,
+    "description": "Page (alert) a staff member about an incident; sends a real notification. Required: staff_id (EMP-*), message. Optional: severity (low|high|critical, default high)."
+   },
+   {
+    "system": "roster",
+    "tool": "list_pages",
+    "spec": "GET /pages",
+    "mutating": false,
+    "description": "List pages that were sent, with acknowledgement status."
+   },
+   {
+    "system": "tickets_fused",
+    "tool": "process_refund",
+    "spec": "POST /fused/process_refund",
+    "mutating": true,
+    "description": "Validate and issue a refund for a given ticket/order based on policy. Returns the refund record on success or an error dict on failure."
+   },
+   {
+    "system": "orders",
+    "tool": "list_customers",
+    "spec": "GET /customers",
+    "mutating": false,
+    "description": "List all customers (clinics and pharmacies) with city and account tier."
+   },
+   {
+    "system": "orders",
+    "tool": "get_customer",
+    "spec": "GET /customers/{customer_id}",
+    "mutating": false,
+    "description": "Get one customer by id, e.g. CUS-101: name, city, tier, phone."
+   },
+   {
+    "system": "orders",
+    "tool": "list_customer_orders",
+    "spec": "GET /customers/{customer_id}/orders",
+    "mutating": false,
+    "description": "All orders placed by one customer."
+   },
+   {
+    "system": "orders",
+    "tool": "list_orders",
+    "spec": "GET /orders",
+    "mutating": false,
+    "description": "List all orders with status, items, value and the shipment carrying them."
+   },
+   {
+    "system": "orders",
+    "tool": "get_order",
+    "spec": "GET /orders/{order_id}",
+    "mutating": false,
+    "description": "Get one order by id, e.g. ORD-5001."
+   },
+   {
+    "system": "orders",
+    "tool": "create_order",
+    "spec": "POST /orders",
+    "mutating": true,
+    "description": "Place a new order. Required: customer_id (CUS-*), items (list of {sku, qty})."
+   },
+   {
+    "system": "orders",
+    "tool": "cancel_order",
+    "spec": "POST /orders/{order_id}/cancel",
+    "mutating": true,
+    "description": "Cancel an order that has not shipped yet."
+   },
+   {
+    "system": "orders",
+    "tool": "list_shipments",
+    "spec": "GET /shipments",
+    "mutating": false,
+    "description": "List all shipments with carrier, route, status, promised date and delay reason."
+   },
+   {
+    "system": "orders",
+    "tool": "list_delayed_shipments",
+    "spec": "GET /shipments/delayed",
+    "mutating": false,
+    "description": "Shipments that are currently delayed, with the reason for each delay."
+   },
+   {
+    "system": "orders",
+    "tool": "get_shipment",
+    "spec": "GET /shipments/{shipment_id}",
+    "mutating": false,
+    "description": "Get one shipment by id, e.g. SHP-1042."
+   },
+   {
+    "system": "orders",
+    "tool": "list_shipment_orders",
+    "spec": "GET /shipments/{shipment_id}/orders",
+    "mutating": false,
+    "description": "Orders (and therefore customers) carried by one shipment."
+   },
+   {
+    "system": "orders",
+    "tool": "reroute_shipment",
+    "spec": "POST /shipments/{shipment_id}/reroute",
+    "mutating": true,
+    "description": "Reroute a shipment to be fulfilled from a different warehouse. Required: shipment_id (path), from_warehouse_id (WH-*)."
+   }
+  ],
+  "grafts": [
+   {
+    "system": "orders",
+    "exposed": [],
+    "server_endpoints": [
+     "GET /customers",
+     "GET /customers/{customer_id}",
+     "GET /customers/{customer_id}/orders",
+     "GET /orders",
+     "GET /orders/{order_id}",
+     "GET /shipments",
+     "GET /shipments/delayed",
+     "GET /shipments/{shipment_id}",
+     "GET /shipments/{shipment_id}/eta",
+     "GET /shipments/{shipment_id}/orders",
+     "POST /orders",
+     "POST /orders/{order_id}/cancel"
+    ]
+   },
+   {
+    "system": "tickets",
+    "exposed": [],
+    "server_endpoints": [
+     "GET /customers/{customer_id}/tickets",
+     "GET /orders/{order_id}/tickets",
+     "GET /refunds",
+     "GET /tickets",
+     "GET /tickets/{ticket_id}"
+    ]
+   },
+   {
+    "system": "inventory",
+    "exposed": [],
+    "server_endpoints": [
+     "GET /batches/expiring",
+     "GET /batches/expiring-within/{days}",
+     "GET /products",
+     "GET /products/{sku}",
+     "GET /products/{sku}/availability",
+     "GET /reservations",
+     "GET /stock",
+     "GET /stock/low",
+     "GET /warehouses",
+     "GET /warehouses/{warehouse_id}/stock"
+    ]
+   },
+   {
+    "system": "roster",
+    "exposed": [],
+    "server_endpoints": [
+     "GET /customers/{customer_id}/account-manager",
+     "GET /oncall/{region}",
+     "GET /pages",
+     "GET /staff",
+     "GET /staff/{staff_id}",
+     "POST /pages"
+    ]
+   },
+   {
+    "system": "tickets_fused",
+    "exposed": [],
+    "server_endpoints": [
+     "POST /fused/process_refund"
+    ]
+   }
+  ],
+  "models": [
+   "groq:openai/gpt-oss-120b",
+   "groq:qwen/qwen3.8-27b",
+   "groq:openai/gpt-oss-20b",
+   "openrouter:nvidia/nemotron-3-ultra-550b-a55b:free",
+   "openrouter:google/gemma-4-31b-it:free"
+  ],
+  "busy": false
+ },
+ "events": [
+  {
+   "ts": 1795116893.0507083,
+   "kind": "drift.detected",
+   "system": "orders",
+   "t": 0.0
+  },
+  {
+   "ts": 1795116895.9307115,
+   "kind": "atlas.scanned",
+   "system": "orders",
+   "endpoints": 13,
+   "ms": 2844,
+   "t": 2.88
+  },
+  {
+   "ts": 1795116895.9449384,
+   "kind": "drift",
+   "system": "orders",
+   "added": [
+    "GET /shipments/{shipment_id}/eta"
+   ],
+   "removed": [],
+   "rescan_ms": 2894,
+   "smoke": [],
+   "t": 2.894
+  },
+  {
+   "ts": 1795116901.872022,
+   "kind": "ask",
+   "question": "Is there a revised delivery ETA for the delayed Pune insulin shipment SHP-1042? Answer in 2 lines.",
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "t": 8.821
+  },
+  {
+   "ts": 1795116902.0515862,
+   "kind": "llm.rate_limited",
+   "model": "groq:qwen/qwen3.8-27b",
+   "retry_after": 10.0,
+   "t": 9.001
+  },
+  {
+   "ts": 1795116902.874177,
+   "kind": "step",
+   "step": "tool_use",
+   "name": "find_capability",
+   "input": {
+    "limit": 4,
+    "queries": [
+     "shipment SHP-1042 ETA",
+     "shipment SHP-1042 status"
+    ]
+   },
+   "t": 9.823
+  },
+  {
+   "ts": 1795116902.8781767,
+   "kind": "atlas.search",
+   "query": "shipment SHP-1042 ETA",
+   "hits": 4,
+   "t": 9.827
+  },
+  {
+   "ts": 1795116902.8835168,
+   "kind": "atlas.search",
+   "query": "shipment SHP-1042 status",
+   "hits": 4,
+   "t": 9.833
+  },
+  {
+   "ts": 1795116902.8845158,
+   "kind": "step",
+   "step": "tool_result",
+   "name": "find_capability",
+   "is_error": false,
+   "output": "{\"shipment SHP-1042 ETA\":[{\"system\":\"orders\",\"endpoint\":\"GET /shipments/{shipment_id}/eta\",\"tool\":\"get_shipment_eta\",\"params\":[\"shipment_id\"],\"changes_data\":false,\"about\":\"Live revised ETA for a shipment from the carrier feed, with confidence and the latest upda\"},{\"system\":\"orders\",\"endpoint\":\"GET /shipments/{shipment_id}\",\"tool\":\"get_shipment\",\"params\":[\"shipment_id\"],\"changes_data\":false,\"about",
+   "t": 9.834
+  },
+  {
+   "ts": 1795116903.4158318,
+   "kind": "llm.tool_call_rejected",
+   "error": "Error code: 400 - {'error': {'message': 'Failed to parse tool call arguments as JSON', 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': '{\"name\": \"graft\", \"arguments\": {\"grafts\":[{\"system\":\"orders\",\"endpoints\":[\"GET /shipments/{shipment_id}/eta\"],\"reason\":\"Need revise",
+   "t": 10.365
+  },
+  {
+   "ts": 1795116903.4178355,
+   "kind": "llm.waiting",
+   "seconds": 2.0,
+   "for_model": "groq:openai/gpt-oss-20b",
+   "t": 10.367
+  },
+  {
+   "ts": 1795116905.4111903,
+   "kind": "llm.waiting",
+   "seconds": 0.0,
+   "for_model": "groq:openai/gpt-oss-20b",
+   "t": 12.36
+  },
+  {
+   "ts": 1795116905.714552,
+   "kind": "llm.rate_limited",
+   "model": "groq:openai/gpt-oss-20b",
+   "retry_after": 294.0,
+   "t": 12.664
+  },
+  {
+   "ts": 1795116909.8014343,
+   "kind": "step",
+   "step": "tool_use",
+   "name": "graft",
+   "input": {
+    "grafts": [
+     {
+      "system": "orders",
+      "endpoints": [
+       "GET /shipments/{shipment_id}/eta"
+      ],
+      "reason": "Get revised ETA for delayed Pune insulin shipment SHP-1042"
+     }
+    ]
+   },
+   "t": 16.751
+  },
+  {
+   "ts": 1795116909.8041484,
+   "kind": "graft.start",
+   "system": "orders",
+   "endpoints": [
+    "GET /shipments/{shipment_id}/eta"
+   ],
+   "reason": "Get revised ETA for delayed Pune insulin shipment SHP-1042",
+   "t": 16.753
+  },
+  {
+   "ts": 1795116909.8041484,
+   "kind": "graft.done",
+   "system": "orders",
+   "endpoints": [
+    "GET /shipments/{shipment_id}/eta"
+   ],
+   "tools": [
+    "get_shipment_eta"
+   ],
+   "how": "reactivated",
+   "build_ms": 0,
+   "connect_ms": 0,
+   "live_tools": 1,
+   "t": 16.753
+  },
+  {
+   "ts": 1795116909.8051534,
+   "kind": "step",
+   "step": "tool_result",
+   "name": "graft",
+   "is_error": false,
+   "output": "[{\"system\":\"orders\",\"live_tools_for_system\":[\"orders__get_shipment_eta\"],\"how\":\"reactivated\",\"synapse_build_ms\":0,\"live_tools_total\":1}]",
+   "t": 16.754
+  },
+  {
+   "ts": 1795116909.806164,
+   "kind": "llm.waiting",
+   "seconds": 2.2,
+   "for_model": "groq:qwen/qwen3.8-27b",
+   "t": 16.755
+  },
+  {
+   "ts": 1795116912.5007358,
+   "kind": "llm.tool_call_rejected",
+   "error": "Error code: 400 - {'error': {'message': \"tool call validation failed: attempted to call tool 'orders__get shipmet_eta' which was not in request.tools\", 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': '<tool_call>\\n<function=orders__get shipmet_eta>\\n<parameter=shipme",
+   "t": 19.45
+  },
+  {
+   "ts": 1795116912.504902,
+   "kind": "llm.waiting",
+   "seconds": 2.0,
+   "for_model": "groq:qwen/qwen3.8-27b",
+   "t": 19.454
+  },
+  {
+   "ts": 1795116914.6338465,
+   "kind": "llm.rate_limited",
+   "model": "groq:qwen/qwen3.8-27b",
+   "retry_after": 10.0,
+   "t": 21.583
+  },
+  {
+   "ts": 1795116917.7168224,
+   "kind": "step",
+   "step": "tool_use",
+   "name": "orders__get_shipment_eta",
+   "input": {
+    "shipment_id": "SHP-1042"
+   },
+   "t": 24.666
+  },
+  {
+   "ts": 1795116917.717813,
+   "kind": "tool.call",
+   "system": "orders",
+   "tool": "get_shipment_eta",
+   "args": {
+    "shipment_id": "SHP-1042"
+   },
+   "t": 24.667
+  },
+  {
+   "ts": 1795116917.7667768,
+   "kind": "tool.result",
+   "system": "orders",
+   "tool": "get_shipment_eta",
+   "ok": true,
+   "ms": 48,
+   "chars": 186,
+   "t": 24.716
+  },
+  {
+   "ts": 1795116917.7690618,
+   "kind": "step",
+   "step": "tool_result",
+   "name": "orders__get_shipment_eta",
+   "is_error": false,
+   "output": "{\"shipment_id\":\"SHP-1042\",\"revised_eta\":\"2026-11-20T14:00:00+05:30\",\"confidence\":\"high\",\"update\":\"Replacement reefer truck dispatched from Mumbai at 06:10; cold chain verified at 4.1 C\"}",
+   "t": 24.718
+  },
+  {
+   "ts": 1795116922.0741117,
+   "kind": "step",
+   "step": "text",
+   "text": "Revised ETA for SHP-1042: **Nov 20, 2026 at 14:00 IST** (high confidence) \u2014 replacement reefer truck dispatched from Mumbai at 06:10, cold chain verified at 4.1\u00b0C. [orders__get_shipment_eta]\n\nNext step: Monitor carrier feed for any further updates before the new delivery window.",
+   "t": 29.023
+  },
+  {
+   "ts": 1795116922.0761166,
+   "kind": "prune",
+   "system": "orders",
+   "tools": [
+    "get_shipment_eta"
+   ],
+   "live_tools": 0,
+   "t": 29.025
+  },
+  {
+   "ts": 1795116922.0761166,
+   "kind": "answer",
+   "question": "Is there a revised delivery ETA for the delayed Pune insulin shipment SHP-1042? Answer in 2 lines.",
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "turns": 6,
+   "tool_calls": 3,
+   "grafts": 1,
+   "peak_live_tools": 2,
+   "seconds": 20.2,
+   "input_tokens": 6873,
+   "output_tokens": 596,
+   "t": 29.025
+  },
+  {
+   "ts": 1795116922.0761166,
+   "kind": "answer.text",
+   "question": "Is there a revised delivery ETA for the delayed Pune insulin shipment SHP-1042? Answer in 2 lines.",
+   "text": "Revised ETA for SHP-1042: **Nov 20, 2026 at 14:00 IST** (high confidence) \u2014 replacement reefer truck dispatched from Mumbai at 06:10, cold chain verified at 4.1\u00b0C. [orders__get_shipment_eta]\n\nNext step: Monitor carrier feed for any further updates before the new delivery window.",
+   "turns": 6,
+   "tool_calls": 3,
+   "grafts": 1,
+   "peak_live_tools": 2,
+   "seconds": 20.2,
+   "tokens": 7469,
+   "models": [
+    "groq:openai/gpt-oss-120b",
+    "groq:openai/gpt-oss-20b",
+    "openrouter:nvidia/nemotron-3-ultra-550b-a55b:free"
+   ],
+   "t": 29.025
+  }
+ ]
+}

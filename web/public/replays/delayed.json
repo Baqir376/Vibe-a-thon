@@ -1,0 +1,968 @@
+{
+ "id": "delayed",
+ "title": "Delayed shipment impact",
+ "blurb": "One question spans orders, tickets and the on-call roster. Watch three systems get grafted and pruned.",
+ "question": "The insulin shipment to Pune is delayed. Which customers are affected, have they raised support tickets, and who is on call to handle it?",
+ "recorded_at": "2026-11-20 00:30",
+ "state": {
+  "systems": [
+   {
+    "name": "orders",
+    "mode": "hosted",
+    "description": "Customers (clinics, pharmacies), their orders, and shipments - carrier, delays and delay reasons, rerouting. Python/FastAPI."
+   },
+   {
+    "name": "inventory",
+    "mode": "local",
+    "description": "Warehouse stock per SKU, low-stock alerts, expiring batches, stock reservations, draft purchase orders. Python/FastAPI."
+   },
+   {
+    "name": "tickets",
+    "mode": "local",
+    "description": "Customer support tickets, comments, ticket status, refunds under the refund policy. Python/FastAPI."
+   },
+   {
+    "name": "roster",
+    "mode": "hosted",
+    "description": "Staff, account managers per customer, who is on call per region/team, paging staff. Python/FastAPI."
+   },
+   {
+    "name": "tickets_fused",
+    "mode": "fused",
+    "description": "Verified one-step workflow tools composed by Synapse Custom mode from tickets's internal functions."
+   }
+  ],
+  "capabilities": [
+   {
+    "system": "orders",
+    "tool": "list_customers",
+    "spec": "GET /customers",
+    "mutating": false,
+    "description": "List all customers (clinics and pharmacies) with city and account tier."
+   },
+   {
+    "system": "orders",
+    "tool": "get_customer",
+    "spec": "GET /customers/{customer_id}",
+    "mutating": false,
+    "description": "Get one customer by id, e.g. CUS-101: name, city, tier, phone."
+   },
+   {
+    "system": "orders",
+    "tool": "list_customer_orders",
+    "spec": "GET /customers/{customer_id}/orders",
+    "mutating": false,
+    "description": "All orders placed by one customer."
+   },
+   {
+    "system": "orders",
+    "tool": "list_orders",
+    "spec": "GET /orders",
+    "mutating": false,
+    "description": "List all orders with status, items, value and the shipment carrying them."
+   },
+   {
+    "system": "orders",
+    "tool": "get_order",
+    "spec": "GET /orders/{order_id}",
+    "mutating": false,
+    "description": "Get one order by id, e.g. ORD-5001."
+   },
+   {
+    "system": "orders",
+    "tool": "create_order",
+    "spec": "POST /orders",
+    "mutating": true,
+    "description": "Place a new order. Required: customer_id (CUS-*), items (list of {sku, qty})."
+   },
+   {
+    "system": "orders",
+    "tool": "cancel_order",
+    "spec": "POST /orders/{order_id}/cancel",
+    "mutating": true,
+    "description": "Cancel an order that has not shipped yet."
+   },
+   {
+    "system": "orders",
+    "tool": "list_shipments",
+    "spec": "GET /shipments",
+    "mutating": false,
+    "description": "List all shipments with carrier, route, status, promised date and delay reason."
+   },
+   {
+    "system": "orders",
+    "tool": "list_delayed_shipments",
+    "spec": "GET /shipments/delayed",
+    "mutating": false,
+    "description": "Shipments that are currently delayed, with the reason for each delay."
+   },
+   {
+    "system": "orders",
+    "tool": "get_shipment",
+    "spec": "GET /shipments/{shipment_id}",
+    "mutating": false,
+    "description": "Get one shipment by id, e.g. SHP-1042."
+   },
+   {
+    "system": "orders",
+    "tool": "list_shipment_orders",
+    "spec": "GET /shipments/{shipment_id}/orders",
+    "mutating": false,
+    "description": "Orders (and therefore customers) carried by one shipment."
+   },
+   {
+    "system": "orders",
+    "tool": "reroute_shipment",
+    "spec": "POST /shipments/{shipment_id}/reroute",
+    "mutating": true,
+    "description": "Reroute a shipment to be fulfilled from a different warehouse. Required: shipment_id (path), from_warehouse_id (WH-*)."
+   },
+   {
+    "system": "inventory",
+    "tool": "list_products",
+    "spec": "GET /products",
+    "mutating": false,
+    "description": "List every product in the catalogue with price and cold-chain flag."
+   },
+   {
+    "system": "inventory",
+    "tool": "get_product",
+    "spec": "GET /products/{sku}",
+    "mutating": false,
+    "description": "Get one product by SKU."
+   },
+   {
+    "system": "inventory",
+    "tool": "list_warehouses",
+    "spec": "GET /warehouses",
+    "mutating": false,
+    "description": "List warehouses with city, region and whether they have cold storage."
+   },
+   {
+    "system": "inventory",
+    "tool": "get_stock",
+    "spec": "GET /stock",
+    "mutating": false,
+    "description": "Available stock (on hand minus reservations) per warehouse and SKU. Filter by warehouse_id and/or sku."
+   },
+   {
+    "system": "inventory",
+    "tool": "get_low_stock",
+    "spec": "GET /stock/low",
+    "mutating": false,
+    "description": "Items whose available stock is below the reorder threshold, with the shortfall."
+   },
+   {
+    "system": "inventory",
+    "tool": "get_warehouse_stock",
+    "spec": "GET /warehouses/{warehouse_id}/stock",
+    "mutating": false,
+    "description": "Available stock of every SKU in one warehouse (e.g. WH-PUNE)."
+   },
+   {
+    "system": "inventory",
+    "tool": "get_sku_availability",
+    "spec": "GET /products/{sku}/availability",
+    "mutating": false,
+    "description": "Where a SKU is available: stock per warehouse, so shortages can be covered from another warehouse."
+   },
+   {
+    "system": "inventory",
+    "tool": "get_expiring_batches",
+    "spec": "GET /batches/expiring",
+    "mutating": false,
+    "description": "Batches that expire within the given number of days."
+   },
+   {
+    "system": "inventory",
+    "tool": "get_batches_expiring_within",
+    "spec": "GET /batches/expiring-within/{days}",
+    "mutating": false,
+    "description": "Batches that expire within the given number of days (path form)."
+   },
+   {
+    "system": "inventory",
+    "tool": "create_reservation",
+    "spec": "POST /reservations",
+    "mutating": true,
+    "description": "Reserve stock for a customer order. Required: warehouse_id (WH-PUNE|WH-MUM|WH-BLR), sku, qty (integer), order_id (ORD-*). Fails if not enough is available."
+   },
+   {
+    "system": "inventory",
+    "tool": "list_reservations",
+    "spec": "GET /reservations",
+    "mutating": false,
+    "description": "List stock reservations, optionally for one order."
+   },
+   {
+    "system": "inventory",
+    "tool": "create_purchase_order",
+    "spec": "POST /purchase-orders",
+    "mutating": true,
+    "description": "Create a DRAFT purchase order to restock a warehouse (not sent to suppliers). Required: warehouse_id (WH-*), lines (list of {sku, qty}). Optional: note."
+   },
+   {
+    "system": "tickets",
+    "tool": "list_tickets",
+    "spec": "GET /tickets",
+    "mutating": false,
+    "description": "List support tickets. Filter by customer_id, order_id and/or status."
+   },
+   {
+    "system": "tickets",
+    "tool": "list_customer_tickets",
+    "spec": "GET /customers/{customer_id}/tickets",
+    "mutating": false,
+    "description": "All support tickets raised by one customer (e.g. CUS-101), any status."
+   },
+   {
+    "system": "tickets",
+    "tool": "list_order_tickets",
+    "spec": "GET /orders/{order_id}/tickets",
+    "mutating": false,
+    "description": "All support tickets that reference one order (e.g. ORD-5001)."
+   },
+   {
+    "system": "tickets",
+    "tool": "get_ticket",
+    "spec": "GET /tickets/{ticket_id}",
+    "mutating": false,
+    "description": "Get one ticket with its comment thread."
+   },
+   {
+    "system": "tickets",
+    "tool": "create_ticket",
+    "spec": "POST /tickets",
+    "mutating": true,
+    "description": "Open a new support ticket. Required: customer_id (CUS-*), subject. Optional: priority (low|medium|high|urgent, default medium), order_id (ORD-*)."
+   },
+   {
+    "system": "tickets",
+    "tool": "add_comment",
+    "spec": "POST /tickets/{ticket_id}/comments",
+    "mutating": true,
+    "description": "Add a comment to a ticket (e.g. an update to the customer). Required: ticket_id (path), author (e.g. \"support\"), text."
+   },
+   {
+    "system": "tickets",
+    "tool": "set_ticket_status",
+    "spec": "PATCH /tickets/{ticket_id}/status",
+    "mutating": true,
+    "description": "Change a ticket's status. Required: ticket_id (path), status (open|pending|resolved|closed)."
+   },
+   {
+    "system": "tickets",
+    "tool": "create_refund",
+    "spec": "POST /refunds",
+    "mutating": true,
+    "description": "Issue a refund for a ticket; the refund policy computes the refundable amount. Required: ticket_id (TKT-*), order_id (ORD-*), amount_inr (the FULL order value, number), reason (exactly one of: late_delivery, damaged, wrong_item, cold_chain_breach, other). For late_delivery also pass days_late (integer). Refuses duplicates and amounts above the auto-refund limit."
+   },
+   {
+    "system": "tickets",
+    "tool": "list_refunds",
+    "spec": "GET /refunds",
+    "mutating": false,
+    "description": "List refunds already issued, optionally for one ticket."
+   },
+   {
+    "system": "roster",
+    "tool": "list_staff",
+    "spec": "GET /staff",
+    "mutating": false,
+    "description": "List all staff with team, region, role and the customer accounts they manage."
+   },
+   {
+    "system": "roster",
+    "tool": "get_staff",
+    "spec": "GET /staff/{staff_id}",
+    "mutating": false,
+    "description": "Get one staff member by id, e.g. EMP-21."
+   },
+   {
+    "system": "roster",
+    "tool": "get_account_manager",
+    "spec": "GET /customers/{customer_id}/account-manager",
+    "mutating": false,
+    "description": "The account manager responsible for a customer, e.g. CUS-101."
+   },
+   {
+    "system": "roster",
+    "tool": "get_oncall",
+    "spec": "GET /oncall/{region}",
+    "mutating": false,
+    "description": "Who is on call today in a region (west, south), for every team."
+   },
+   {
+    "system": "roster",
+    "tool": "page_staff",
+    "spec": "POST /pages",
+    "mutating": true,
+    "description": "Page (alert) a staff member about an incident; sends a real notification. Required: staff_id (EMP-*), message. Optional: severity (low|high|critical, default high)."
+   },
+   {
+    "system": "roster",
+    "tool": "list_pages",
+    "spec": "GET /pages",
+    "mutating": false,
+    "description": "List pages that were sent, with acknowledgement status."
+   },
+   {
+    "system": "tickets_fused",
+    "tool": "process_refund",
+    "spec": "POST /fused/process_refund",
+    "mutating": true,
+    "description": "Validate and issue a refund for a given ticket/order based on policy. Returns the refund record on success or an error dict on failure."
+   }
+  ],
+  "grafts": [
+   {
+    "system": "orders",
+    "exposed": [],
+    "server_endpoints": [
+     "GET /customers",
+     "GET /customers/{customer_id}",
+     "GET /customers/{customer_id}/orders",
+     "GET /orders",
+     "GET /orders/{order_id}",
+     "GET /shipments",
+     "GET /shipments/delayed",
+     "GET /shipments/{shipment_id}",
+     "GET /shipments/{shipment_id}/orders",
+     "POST /orders",
+     "POST /orders/{order_id}/cancel"
+    ]
+   },
+   {
+    "system": "tickets",
+    "exposed": [],
+    "server_endpoints": [
+     "GET /customers/{customer_id}/tickets",
+     "GET /orders/{order_id}/tickets",
+     "GET /refunds",
+     "GET /tickets",
+     "GET /tickets/{ticket_id}"
+    ]
+   },
+   {
+    "system": "inventory",
+    "exposed": [],
+    "server_endpoints": [
+     "GET /batches/expiring",
+     "GET /batches/expiring-within/{days}",
+     "GET /products",
+     "GET /products/{sku}",
+     "GET /products/{sku}/availability",
+     "GET /reservations",
+     "GET /stock",
+     "GET /stock/low",
+     "GET /warehouses",
+     "GET /warehouses/{warehouse_id}/stock"
+    ]
+   },
+   {
+    "system": "roster",
+    "exposed": [],
+    "server_endpoints": [
+     "GET /customers/{customer_id}/account-manager",
+     "GET /oncall/{region}",
+     "GET /pages",
+     "GET /staff",
+     "GET /staff/{staff_id}",
+     "POST /pages"
+    ]
+   }
+  ],
+  "models": [
+   "groq:openai/gpt-oss-120b",
+   "groq:qwen/qwen3.8-27b",
+   "groq:openai/gpt-oss-20b",
+   "openrouter:nvidia/nemotron-3-ultra-550b-a55b:free",
+   "openrouter:google/gemma-4-31b-it:free"
+  ],
+  "busy": false
+ },
+ "events": [
+  {
+   "ts": 1795116619.8436818,
+   "kind": "ask",
+   "question": "The insulin shipment to Pune is delayed. Which customers are affected, have they raised support tickets, and who is on call to handle it?",
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "t": 0.0
+  },
+  {
+   "ts": 1795116620.4853966,
+   "kind": "step",
+   "step": "tool_use",
+   "name": "find_capability",
+   "input": {
+    "limit": 5,
+    "queries": [
+     "delayed insulin shipments to Pune",
+     "customers for a shipment",
+     "support tickets for a customer",
+     "who is on call"
+    ]
+   },
+   "t": 0.642
+  },
+  {
+   "ts": 1795116620.4909987,
+   "kind": "atlas.search",
+   "query": "delayed insulin shipments to Pune",
+   "hits": 5,
+   "t": 0.647
+  },
+  {
+   "ts": 1795116620.4938302,
+   "kind": "atlas.search",
+   "query": "customers for a shipment",
+   "hits": 5,
+   "t": 0.65
+  },
+  {
+   "ts": 1795116620.4995427,
+   "kind": "atlas.search",
+   "query": "support tickets for a customer",
+   "hits": 5,
+   "t": 0.656
+  },
+  {
+   "ts": 1795116620.501174,
+   "kind": "atlas.search",
+   "query": "who is on call",
+   "hits": 5,
+   "t": 0.657
+  },
+  {
+   "ts": 1795116620.5120046,
+   "kind": "step",
+   "step": "tool_result",
+   "name": "find_capability",
+   "is_error": false,
+   "output": "{\"delayed insulin shipments to Pune\":[{\"system\":\"orders\",\"endpoint\":\"GET /shipments/delayed\",\"tool\":\"list_delayed_shipments\",\"params\":[],\"changes_data\":false,\"about\":\"Shipments that are currently delayed, with the reason for each delay.\"},{\"system\":\"orders\",\"endpoint\":\"POST /shipments/{shipment_id}/reroute\",\"tool\":\"reroute_shipment\",\"params\":[\"shipment_id\",\"from_warehouse_id\"],\"changes_data\":true,",
+   "t": 0.668
+  },
+  {
+   "ts": 1795116621.5249925,
+   "kind": "step",
+   "step": "tool_use",
+   "name": "graft",
+   "input": {
+    "grafts": [
+     {
+      "endpoints": [
+       "GET /shipments/delayed",
+       "GET /shipments/{shipment_id}/orders"
+      ],
+      "reason": "Identify delayed shipments to Pune and the customers on those shipments",
+      "system": "orders"
+     },
+     {
+      "endpoints": [
+       "GET /customers/{customer_id}/tickets"
+      ],
+      "reason": "Check if affected customers have raised support tickets",
+      "system": "tickets"
+     },
+     {
+      "endpoints": [
+       "GET /oncall/{region}"
+      ],
+      "reason": "Find who is on call for the west region (Pune)",
+      "system": "roster"
+     }
+    ]
+   },
+   "t": 1.681
+  },
+  {
+   "ts": 1795116621.5260553,
+   "kind": "graft.start",
+   "system": "orders",
+   "endpoints": [
+    "GET /shipments/delayed",
+    "GET /shipments/{shipment_id}/orders"
+   ],
+   "reason": "Identify delayed shipments to Pune and the customers on those shipments",
+   "t": 1.682
+  },
+  {
+   "ts": 1795116621.526702,
+   "kind": "graft.done",
+   "system": "orders",
+   "endpoints": [
+    "GET /shipments/delayed",
+    "GET /shipments/{shipment_id}/orders"
+   ],
+   "tools": [
+    "list_delayed_shipments",
+    "list_shipment_orders"
+   ],
+   "how": "reactivated",
+   "build_ms": 0,
+   "connect_ms": 0,
+   "live_tools": 2,
+   "t": 1.683
+  },
+  {
+   "ts": 1795116621.526702,
+   "kind": "graft.start",
+   "system": "tickets",
+   "endpoints": [
+    "GET /customers/{customer_id}/tickets"
+   ],
+   "reason": "Check if affected customers have raised support tickets",
+   "t": 1.683
+  },
+  {
+   "ts": 1795116621.528908,
+   "kind": "graft.done",
+   "system": "tickets",
+   "endpoints": [
+    "GET /customers/{customer_id}/tickets"
+   ],
+   "tools": [
+    "list_customer_tickets"
+   ],
+   "how": "reactivated",
+   "build_ms": 0,
+   "connect_ms": 0,
+   "live_tools": 3,
+   "t": 1.685
+  },
+  {
+   "ts": 1795116621.529912,
+   "kind": "graft.start",
+   "system": "roster",
+   "endpoints": [
+    "GET /oncall/{region}"
+   ],
+   "reason": "Find who is on call for the west region (Pune)",
+   "t": 1.686
+  },
+  {
+   "ts": 1795116621.5309384,
+   "kind": "graft.done",
+   "system": "roster",
+   "endpoints": [
+    "GET /oncall/{region}"
+   ],
+   "tools": [
+    "get_oncall"
+   ],
+   "how": "reactivated",
+   "build_ms": 0,
+   "connect_ms": 0,
+   "live_tools": 4,
+   "t": 1.687
+  },
+  {
+   "ts": 1795116621.5341434,
+   "kind": "step",
+   "step": "tool_result",
+   "name": "graft",
+   "is_error": false,
+   "output": "[{\"system\":\"orders\",\"live_tools_for_system\":[\"orders__list_delayed_shipments\",\"orders__list_shipment_orders\"],\"how\":\"reactivated\",\"synapse_build_ms\":0,\"live_tools_total\":2},{\"system\":\"tickets\",\"live_tools_for_system\":[\"tickets__list_customer_tickets\"],\"how\":\"reactivated\",\"synapse_build_ms\":0,\"live_tools_total\":3},{\"system\":\"roster\",\"live_tools_for_system\":[\"roster__get_oncall\"],\"how\":\"reactivated\"",
+   "t": 1.69
+  },
+  {
+   "ts": 1795116621.6351044,
+   "kind": "llm.rate_limited",
+   "model": "groq:openai/gpt-oss-120b",
+   "retry_after": 542.0,
+   "t": 1.791
+  },
+  {
+   "ts": 1795116621.7354732,
+   "kind": "llm.rate_limited",
+   "model": "groq:qwen/qwen3.8-27b",
+   "retry_after": 10.0,
+   "t": 1.892
+  },
+  {
+   "ts": 1795116622.3494692,
+   "kind": "step",
+   "step": "tool_use",
+   "name": "orders__list_delayed_shipments",
+   "input": {},
+   "t": 2.506
+  },
+  {
+   "ts": 1795116622.3528676,
+   "kind": "tool.call",
+   "system": "orders",
+   "tool": "list_delayed_shipments",
+   "args": {},
+   "t": 2.509
+  },
+  {
+   "ts": 1795116622.3875153,
+   "kind": "tool.result",
+   "system": "orders",
+   "tool": "list_delayed_shipments",
+   "ok": true,
+   "ms": 34,
+   "chars": 260,
+   "t": 2.544
+  },
+  {
+   "ts": 1795116622.3895142,
+   "kind": "step",
+   "step": "tool_result",
+   "name": "orders__list_delayed_shipments",
+   "is_error": false,
+   "output": "[{\"id\":\"SHP-1042\",\"carrier\":\"ColdLine Logistics\",\"origin_warehouse_id\":\"WH-MUM\",\"destination_city\":\"Pune\",\"cold_chain\":true,\"status\":\"delayed\",\"promised_date\":\"2026-11-17\",\"delay_reason\":\"Refrigerated truck breakdown at Lonavala; replacement vehicle pending\"}]",
+   "t": 2.546
+  },
+  {
+   "ts": 1795116622.8507879,
+   "kind": "step",
+   "step": "tool_use",
+   "name": "orders__list_shipment_orders",
+   "input": {
+    "shipment_id": "SHP-1042"
+   },
+   "t": 3.007
+  },
+  {
+   "ts": 1795116622.8536177,
+   "kind": "tool.call",
+   "system": "orders",
+   "tool": "list_shipment_orders",
+   "args": {
+    "shipment_id": "SHP-1042"
+   },
+   "t": 3.01
+  },
+  {
+   "ts": 1795116622.885877,
+   "kind": "tool.result",
+   "system": "orders",
+   "tool": "list_shipment_orders",
+   "ok": true,
+   "ms": 31,
+   "chars": 607,
+   "t": 3.042
+  },
+  {
+   "ts": 1795116622.885877,
+   "kind": "step",
+   "step": "tool_result",
+   "name": "orders__list_shipment_orders",
+   "is_error": false,
+   "output": "[{\"id\":\"ORD-5001\",\"customer_id\":\"CUS-101\",\"items\":[{\"sku\":\"INS-GLAR-100\",\"qty\":40},{\"sku\":\"SYR-1ML\",\"qty\":4}],\"status\":\"in_transit\",\"value_inr\":60600,\"shipment_id\":\"SHP-1042\",\"placed_at\":\"2026-11-14T10:00:00\"},{\"id\":\"ORD-5002\",\"customer_id\":\"CUS-102\",\"items\":[{\"sku\":\"INS-GLAR-100\",\"qty\":15}],\"status\":\"in_transit\",\"value_inr\":21750,\"shipment_id\":\"SHP-1042\",\"placed_at\":\"2026-11-14T16:20:00\"},{\"id\":\"",
+   "t": 3.042
+  },
+  {
+   "ts": 1795116624.3170774,
+   "kind": "step",
+   "step": "tool_use",
+   "name": "graft",
+   "input": {
+    "grafts": [
+     {
+      "endpoints": [
+       "GET /customers/{customer_id}/tickets"
+      ],
+      "reason": "Check support tickets for affected customers",
+      "system": "tickets"
+     }
+    ]
+   },
+   "t": 4.473
+  },
+  {
+   "ts": 1795116624.3190494,
+   "kind": "step",
+   "step": "tool_result",
+   "name": "graft",
+   "is_error": false,
+   "output": "[{\"system\":\"tickets\",\"live_tools_for_system\":[\"tickets__list_customer_tickets\"],\"how\":\"already_live\",\"synapse_build_ms\":0,\"live_tools_total\":4}]",
+   "t": 4.475
+  },
+  {
+   "ts": 1795116624.9951546,
+   "kind": "step",
+   "step": "tool_use",
+   "name": "tickets__list_customer_tickets",
+   "input": {
+    "customer_id": "CUS-101"
+   },
+   "t": 5.151
+  },
+  {
+   "ts": 1795116624.9981577,
+   "kind": "tool.call",
+   "system": "tickets",
+   "tool": "list_customer_tickets",
+   "args": {
+    "customer_id": "CUS-101"
+   },
+   "t": 5.154
+  },
+  {
+   "ts": 1795116625.047704,
+   "kind": "tool.result",
+   "system": "tickets",
+   "tool": "list_customer_tickets",
+   "ok": true,
+   "ms": 50,
+   "chars": 300,
+   "t": 5.204
+  },
+  {
+   "ts": 1795116625.049707,
+   "kind": "step",
+   "step": "tool_result",
+   "name": "tickets__list_customer_tickets",
+   "is_error": false,
+   "output": "{\"id\":\"TKT-9001\",\"customer_id\":\"CUS-101\",\"order_id\":\"ORD-5001\",\"subject\":\"Insulin glargine not delivered - patients waiting\",\"priority\":\"high\",\"status\":\"open\",\"created\":\"2026-11-18T09:12:00\",\"comments\":[{\"author\":\"customer\",\"text\":\"We have 14 patients due for refills tomorrow. Please advise ETA.\"}]}",
+   "t": 5.206
+  },
+  {
+   "ts": 1795116625.1475084,
+   "kind": "llm.rate_limited",
+   "model": "groq:openai/gpt-oss-20b",
+   "retry_after": 15.0,
+   "t": 5.304
+  },
+  {
+   "ts": 1795116627.990655,
+   "kind": "step",
+   "step": "tool_use",
+   "name": "tickets__list_customer_tickets",
+   "input": {
+    "customer_id": "CUS-102"
+   },
+   "t": 8.147
+  },
+  {
+   "ts": 1795116627.9932508,
+   "kind": "tool.call",
+   "system": "tickets",
+   "tool": "list_customer_tickets",
+   "args": {
+    "customer_id": "CUS-102"
+   },
+   "t": 8.15
+  },
+  {
+   "ts": 1795116628.0251422,
+   "kind": "tool.result",
+   "system": "tickets",
+   "tool": "list_customer_tickets",
+   "ok": true,
+   "ms": 31,
+   "chars": 2,
+   "t": 8.181
+  },
+  {
+   "ts": 1795116628.0251422,
+   "kind": "step",
+   "step": "tool_result",
+   "name": "tickets__list_customer_tickets",
+   "is_error": false,
+   "output": "[]",
+   "t": 8.181
+  },
+  {
+   "ts": 1795116628.0281315,
+   "kind": "llm.waiting",
+   "seconds": 3.7,
+   "for_model": "groq:qwen/qwen3.8-27b",
+   "t": 8.184
+  },
+  {
+   "ts": 1795116631.7324915,
+   "kind": "llm.waiting",
+   "seconds": 0.0,
+   "for_model": "groq:qwen/qwen3.8-27b",
+   "t": 11.889
+  },
+  {
+   "ts": 1795116632.1356156,
+   "kind": "llm.rate_limited",
+   "model": "groq:qwen/qwen3.8-27b",
+   "retry_after": 10.0,
+   "t": 12.292
+  },
+  {
+   "ts": 1795116635.5365815,
+   "kind": "step",
+   "step": "tool_use",
+   "name": "tickets__list_customer_tickets",
+   "input": {
+    "customer_id": "CUS-103"
+   },
+   "t": 15.693
+  },
+  {
+   "ts": 1795116635.5479083,
+   "kind": "tool.call",
+   "system": "tickets",
+   "tool": "list_customer_tickets",
+   "args": {
+    "customer_id": "CUS-103"
+   },
+   "t": 15.704
+  },
+  {
+   "ts": 1795116635.578548,
+   "kind": "tool.result",
+   "system": "tickets",
+   "tool": "list_customer_tickets",
+   "ok": true,
+   "ms": 30,
+   "chars": 188,
+   "t": 15.735
+  },
+  {
+   "ts": 1795116635.5828843,
+   "kind": "step",
+   "step": "tool_result",
+   "name": "tickets__list_customer_tickets",
+   "is_error": false,
+   "output": "{\"id\":\"TKT-9002\",\"customer_id\":\"CUS-103\",\"order_id\":\"ORD-5003\",\"subject\":\"Where is our cold-chain order?\",\"priority\":\"medium\",\"status\":\"open\",\"created\":\"2026-11-18T15:40:00\",\"comments\":[]}",
+   "t": 15.739
+  },
+  {
+   "ts": 1795116635.5868776,
+   "kind": "llm.waiting",
+   "seconds": 4.6,
+   "for_model": "groq:openai/gpt-oss-20b",
+   "t": 15.743
+  },
+  {
+   "ts": 1795116640.1319044,
+   "kind": "llm.waiting",
+   "seconds": 2.0,
+   "for_model": "groq:qwen/qwen3.8-27b",
+   "t": 20.288
+  },
+  {
+   "ts": 1795116642.3645194,
+   "kind": "llm.rate_limited",
+   "model": "groq:qwen/qwen3.8-27b",
+   "retry_after": 10.0,
+   "t": 22.521
+  },
+  {
+   "ts": 1795116643.0455015,
+   "kind": "step",
+   "step": "tool_use",
+   "name": "roster__get_oncall",
+   "input": {
+    "region": "west"
+   },
+   "t": 23.202
+  },
+  {
+   "ts": 1795116643.0465245,
+   "kind": "tool.call",
+   "system": "roster",
+   "tool": "get_oncall",
+   "args": {
+    "region": "west"
+   },
+   "t": 23.203
+  },
+  {
+   "ts": 1795116643.10106,
+   "kind": "tool.result",
+   "system": "roster",
+   "tool": "get_oncall",
+   "ok": true,
+   "ms": 54,
+   "chars": 498,
+   "t": 23.257
+  },
+  {
+   "ts": 1795116643.1021292,
+   "kind": "step",
+   "step": "tool_result",
+   "name": "roster__get_oncall",
+   "is_error": false,
+   "output": "[{\"team\":\"logistics\",\"staff\":{\"id\":\"EMP-11\",\"name\":\"Priya Deshmukh\",\"team\":\"logistics\",\"region\":\"west\",\"role\":\"Cold-chain dispatch lead\",\"account_manager_for\":[]}},{\"team\":\"customer_success\",\"staff\":{\"id\":\"EMP-22\",\"name\":\"Vikram Joshi\",\"team\":\"customer_success\",\"region\":\"west\",\"role\":\"Account manager\",\"account_manager_for\":[\"CUS-102\",\"CUS-103\"]}},{\"team\":\"finance\",\"staff\":{\"id\":\"EMP-41\",\"name\":\"Fa",
+   "t": 23.258
+  },
+  {
+   "ts": 1795116643.227528,
+   "kind": "llm.rate_limited",
+   "model": "groq:openai/gpt-oss-20b",
+   "retry_after": 22.0,
+   "t": 23.384
+  },
+  {
+   "ts": 1795116652.8842049,
+   "kind": "step",
+   "step": "text",
+   "text": "**Delayed shipment:** SHP-1042 (ColdLine Logistics) to Pune \u2014 refrigerated truck breakdown at Lonavala; replacement pending [orders.list_delayed_shipments].\n\n**Affected customers & orders:**\n- **CUS-101** (ORD-5001): INS-GLAR-100 \u00d740, SYR-1ML \u00d74 \u2014 \u20b960,600 [orders.list_shipment_orders]\n- **CUS-102** (ORD-5002): INS-GLAR-100 \u00d715 \u2014 \u20b921,750 [orders.list_shipment_orders]\n- **CUS-103** (ORD-5003): INS-ASP-100 \u00d720, GLU-STRIP-50 \u00d710 \u2014 \u20b935,390 [orders.list_shipment_orders]\n\n**Support tickets raised:**\n- **CUS-101**: TKT-9001 \u2014 HIGH, open \u2014 \u201cInsulin glargine not delivered - patients waiting\u201d [tickets.list_customer_tickets]\n- **CUS-102**: *none* [tickets.list_customer_tickets]\n- **CUS-103**: TKT-9002 \u2014 MEDIUM, open \u2014 \u201cWhere is our cold-chain order?\u201d [tickets.list_customer_tickets]\n\n**On-call for west region (Pune):**\n- **Logistics**: Priya Deshmukh (EMP-11) \u2014 Cold-chain dispatch lead [roster.get_oncall]\n- **Customer Success**: Vikram Joshi (EMP-22) \u2014 Account manager for CUS-102 & CUS-103 [roster.get_oncall]\n- **Finance**: Farhan Shaikh (EMP-41) \u2014 Refund approver [roster.get_oncall]\n\n**Next step:** Priya (logistics) to confirm replacement vehicle ETA; Vikram to proactively update CUS-102 & CUS-103; CUS-101\u2019s high-priority ticket needs immediate ETA communication.",
+   "t": 33.041
+  },
+  {
+   "ts": 1795116652.8861914,
+   "kind": "prune",
+   "system": "orders",
+   "tools": [
+    "list_delayed_shipments",
+    "list_shipment_orders"
+   ],
+   "live_tools": 2,
+   "t": 33.043
+  },
+  {
+   "ts": 1795116652.8861914,
+   "kind": "prune",
+   "system": "tickets",
+   "tools": [
+    "list_customer_tickets"
+   ],
+   "live_tools": 1,
+   "t": 33.043
+  },
+  {
+   "ts": 1795116652.8872058,
+   "kind": "prune",
+   "system": "roster",
+   "tools": [
+    "get_oncall"
+   ],
+   "live_tools": 0,
+   "t": 33.044
+  },
+  {
+   "ts": 1795116652.8872058,
+   "kind": "answer",
+   "question": "The insulin shipment to Pune is delayed. Which customers are affected, have they raised support tickets, and who is on call to handle it?",
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "turns": 10,
+   "tool_calls": 9,
+   "grafts": 4,
+   "peak_live_tools": 4,
+   "seconds": 33.0,
+   "input_tokens": 27715,
+   "output_tokens": 2010,
+   "t": 33.044
+  },
+  {
+   "ts": 1795116652.8872058,
+   "kind": "answer.text",
+   "question": "The insulin shipment to Pune is delayed. Which customers are affected, have they raised support tickets, and who is on call to handle it?",
+   "text": "**Delayed shipment:** SHP-1042 (ColdLine Logistics) to Pune \u2014 refrigerated truck breakdown at Lonavala; replacement pending [orders.list_delayed_shipments].\n\n**Affected customers & orders:**\n- **CUS-101** (ORD-5001): INS-GLAR-100 \u00d740, SYR-1ML \u00d74 \u2014 \u20b960,600 [orders.list_shipment_orders]\n- **CUS-102** (ORD-5002): INS-GLAR-100 \u00d715 \u2014 \u20b921,750 [orders.list_shipment_orders]\n- **CUS-103** (ORD-5003): INS-ASP-100 \u00d720, GLU-STRIP-50 \u00d710 \u2014 \u20b935,390 [orders.list_shipment_orders]\n\n**Support tickets raised:**\n- **CUS-101**: TKT-9001 \u2014 HIGH, open \u2014 \u201cInsulin glargine not delivered - patients waiting\u201d [tickets.list_customer_tickets]\n- **CUS-102**: *none* [tickets.list_customer_tickets]\n- **CUS-103**: TKT-9002 \u2014 MEDIUM, open \u2014 \u201cWhere is our cold-chain order?\u201d [tickets.list_customer_tickets]\n\n**On-call for west region (Pune):**\n- **Logistics**: Priya Deshmukh (EMP-11) \u2014 Cold-chain dispatch lead [roster.get_oncall]\n- **Customer Success**: Vikram Joshi (EMP-22) \u2014 Account manager for CUS-102 & CUS-103 [roster.get_oncall]\n- **Finance**: Farhan Shaikh (EMP-41) \u2014 Refund approver [roster.get_oncall]\n\n**Next step:** Priya (logistics) to confirm replacement vehicle ETA; Vikram to proactively update CUS-102 & CUS-103; CUS-101\u2019s high-priority ticket needs immediate ETA communication.",
+   "turns": 10,
+   "tool_calls": 9,
+   "grafts": 4,
+   "peak_live_tools": 4,
+   "seconds": 33.0,
+   "tokens": 29725,
+   "models": [
+    "groq:openai/gpt-oss-120b",
+    "groq:openai/gpt-oss-20b",
+    "openrouter:nvidia/nemotron-3-ultra-550b-a55b:free"
+   ],
+   "t": 33.044
+  }
+ ]
+}
