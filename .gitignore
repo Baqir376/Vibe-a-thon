@@ -10,3 +10,5 @@ services/*/synapse_auto_server*.py
 services/*/.synapse/
 .playwright-mcp/
 services/*/.env.example
+services/tickets/refund_ledger.json
+services/*/*_server.py

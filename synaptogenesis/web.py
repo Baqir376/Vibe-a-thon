@@ -79,8 +79,10 @@ def build_app(prewarm: bool = False) -> FastAPI:
         from .sentinel import Sentinel
         hub.loop = asyncio.get_running_loop()
         events.subscribe(hub.push)
+        from .fusion import Fusion, load_into
         systems = load_systems()
         atlas = Atlas.load_or_build(systems)
+        load_into(systems, atlas)
         gm = GraftManager(systems, atlas, load_policy(), web_approver)
 
         def on_step(kind: str, data: dict) -> None:
@@ -88,7 +90,7 @@ def build_app(prewarm: bool = False) -> FastAPI:
                 data = {**data, "output": data.get("output", "")[:400]}
             events.emit("step", step=kind, **data)
 
-        state.update(systems=systems, atlas=atlas, gm=gm, agent=Agent(gm, atlas, on_step=on_step))
+        state.update(systems=systems, atlas=atlas, gm=gm, agent=Agent(gm, atlas, on_step=on_step, fusion=Fusion(systems, atlas)))
         sentinel = asyncio.create_task(Sentinel(systems, atlas, gm).run())
         if prewarm:
             asyncio.create_task(gm.prewarm())

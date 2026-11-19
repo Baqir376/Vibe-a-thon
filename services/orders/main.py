@@ -89,7 +89,7 @@ def get_order(order_id: str):
 
 @app.post("/orders")
 def create_order(body: OrderIn):
-    """Place a new order for a customer."""
+    """Place a new order. Required: customer_id (CUS-*), items (list of {sku, qty})."""
     _find(CUSTOMERS, body.customer_id, "Customer")
     order = {"id": f"ORD-{5100 + len(ORDERS)}", **body.model_dump(), "status": "placed", "value_inr": 0,
              "shipment_id": None, "placed_at": "2026-11-19T12:00:00"}
@@ -133,7 +133,7 @@ def list_shipment_orders(shipment_id: str):
 
 @app.post("/shipments/{shipment_id}/reroute")
 def reroute_shipment(shipment_id: str, body: RerouteIn):
-    """Reroute a shipment to be fulfilled from a different warehouse."""
+    """Reroute a shipment to be fulfilled from a different warehouse. Required: shipment_id (path), from_warehouse_id (WH-*)."""
     s = _find(SHIPMENTS, shipment_id, "Shipment")
     s["origin_warehouse_id"] = body.from_warehouse_id
     s["status"] = "rerouted"

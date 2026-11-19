@@ -5,7 +5,7 @@ and refunds governed by the company refund policy.
 """
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Optional
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -27,10 +27,21 @@ TICKETS: dict[str, dict] = {
 }
 
 
+PRIORITIES = {"low", "medium", "high", "urgent"}
+STATUSES = {"open", "pending", "resolved", "closed"}
+REASONS = {"late_delivery", "damaged", "wrong_item", "cold_chain_breach", "other"}
+
+
+def _check(value: str, allowed: set[str], field: str) -> None:
+    if value not in allowed:
+        raise HTTPException(422, f"{field} must be one of {sorted(allowed)}, got {value!r}")
+
+
 class TicketIn(BaseModel):
     customer_id: str
     subject: str
-    priority: Literal["low", "medium", "high", "urgent"] = "medium"
+    # low | medium | high | urgent
+    priority: str = "medium"
     order_id: Optional[str] = None
 
 
@@ -40,14 +51,16 @@ class CommentIn(BaseModel):
 
 
 class StatusIn(BaseModel):
-    status: Literal["open", "pending", "resolved", "closed"]
+    # open | pending | resolved | closed
+    status: str
 
 
 class RefundIn(BaseModel):
     ticket_id: str
     order_id: str
     amount_inr: float
-    reason: Literal["late_delivery", "damaged", "wrong_item", "cold_chain_breach", "other"]
+    # late_delivery | damaged | wrong_item | cold_chain_breach | other
+    reason: str
     days_late: int = 0
 
 
@@ -86,7 +99,8 @@ def get_ticket(ticket_id: str):
 
 @app.post("/tickets")
 def create_ticket(body: TicketIn):
-    """Open a new support ticket for a customer."""
+    """Open a new support ticket. Required: customer_id (CUS-*), subject. Optional: priority (low|medium|high|urgent, default medium), order_id (ORD-*)."""
+    _check(body.priority, PRIORITIES, "priority")
     tid = f"TKT-{9000 + len(TICKETS) + 1}"
     TICKETS[tid] = {"id": tid, **body.model_dump(), "status": "open", "created": "2026-11-19T12:00:00", "comments": []}
     return TICKETS[tid]
@@ -94,7 +108,7 @@ def create_ticket(body: TicketIn):
 
 @app.post("/tickets/{ticket_id}/comments")
 def add_comment(ticket_id: str, body: CommentIn):
-    """Add a comment to a ticket (e.g. an update to the customer)."""
+    """Add a comment to a ticket (e.g. an update to the customer). Required: ticket_id (path), author (e.g. "support"), text."""
     t = get_ticket(ticket_id)
     t["comments"].append(body.model_dump())
     return t
@@ -102,7 +116,8 @@ def add_comment(ticket_id: str, body: CommentIn):
 
 @app.patch("/tickets/{ticket_id}/status")
 def set_ticket_status(ticket_id: str, body: StatusIn):
-    """Change a ticket's status."""
+    """Change a ticket's status. Required: ticket_id (path), status (open|pending|resolved|closed)."""
+    _check(body.status, STATUSES, "status")
     t = get_ticket(ticket_id)
     t["status"] = body.status
     return t
@@ -110,15 +125,19 @@ def set_ticket_status(ticket_id: str, body: StatusIn):
 
 @app.post("/refunds")
 def create_refund(body: RefundIn):
-    """Issue a refund against a ticket after checking it against the refund policy."""
+    """Issue a refund for a ticket; the refund policy computes the refundable amount. Required: ticket_id (TKT-*), order_id (ORD-*), amount_inr (the FULL order value, number), reason (exactly one of: late_delivery, damaged, wrong_item, cold_chain_breach, other). For late_delivery also pass days_late (integer). Refuses duplicates and amounts above the auto-refund limit."""
+    _check(body.reason, REASONS, "reason")
     get_ticket(body.ticket_id)
     decision = refunds.check_refund_policy(body.reason, body.days_late, body.amount_inr)
     if not decision["allowed"]:
         raise HTTPException(422, decision["explanation"])
-    return refunds.issue_refund(body.ticket_id, body.order_id, decision["approved_amount_inr"], body.reason)
+    try:
+        return refunds.issue_refund(body.ticket_id, body.order_id, decision["approved_amount_inr"], body.reason)
+    except ValueError as e:
+        raise HTTPException(409, str(e))
 
 
 @app.get("/refunds")
 def list_refunds(ticket_id: Optional[str] = None):
     """List refunds already issued, optionally for one ticket."""
-    return [r for r in refunds.LEDGER if not ticket_id or r["ticket_id"] == ticket_id]
+    return refunds.list_refunds(ticket_id)

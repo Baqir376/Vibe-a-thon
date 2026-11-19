@@ -18,7 +18,7 @@ from .events import emit
 from .graft import GraftError, GraftManager
 
 EFFORT = os.environ.get("SYNAPTO_EFFORT", "medium")
-MAX_TURNS = int(os.environ.get("SYNAPTO_MAX_TURNS", "30"))
+MAX_TURNS = int(os.environ.get("SYNAPTO_MAX_TURNS", "14"))
 PREFER_WAIT_S = float(os.environ.get("SYNAPTO_PREFER_WAIT_S", "6"))
 
 # OpenAI-compatible free providers: (base_url, key env var, default model)
@@ -87,9 +87,10 @@ You start with NO access to company systems. You grow access on demand, through 
 Be efficient. The ideal path is: 1 find_capability call -> 1 graft call -> 1-2 steps of parallel tool calls -> answer.
 
 Rules:
+- If find_capability returns a [VERIFIED ONE-STEP WORKFLOW] tool (system ending in _fused) that does the whole job, graft and use it instead of chaining individual steps.
 - Least privilege: graft the smallest set of endpoints that answers the question. Prefer read-only endpoints and endpoints that filter by id over list-everything endpoints.
 - Never guess data. Every fact in your answer must come from a tool result.
-- Actions that change data (POST/PUT/PATCH/DELETE) are reviewed by a human. Propose them clearly; if declined, accept it.
+- When the user asks you to DO something (refund, page someone, create an order...), graft the data-changing endpoint and CALL it. The harness pauses and asks a human to approve before it runs, so never ask for approval in text. If the human declines, accept it and say what you would have done.
 - Questions often span systems (orders + tickets + roster + inventory). Join facts by shared ids: customers CUS-*, orders ORD-*, shipments SHP-*, staff EMP-*, warehouses WH-*. Pune is in the "west" region.
 - Final answer: decision-ready and SHORT (under 180 words; compact bullets, no long tables). After each fact, cite its source as [system.tool]. End with a one-line "Next step"."""
 
@@ -131,8 +132,10 @@ class RunStats:
 
 
 class Agent:
-    def __init__(self, grafts: GraftManager, atlas: Atlas, on_step=None, auto_prune: bool = True):
+    def __init__(self, grafts: GraftManager, atlas: Atlas, on_step=None, auto_prune: bool = True, fusion=None):
         self.grafts = grafts
+        self.fusion = fusion
+        self.fusion_tasks: list[asyncio.Task] = []
         self.atlas = atlas
         self.provider = PROVIDER
         self.routes = ROUTES
@@ -166,7 +169,7 @@ class Agent:
     async def _chat_with_rotation(self, **kwargs):
         """Free tiers limit tokens-per-minute PER MODEL. On a 429, switch to the next model
         immediately instead of sleeping; sleep only if every model is cooling down."""
-        from openai import APIConnectionError, InternalServerError, RateLimitError
+        from openai import APIConnectionError, APIStatusError, InternalServerError, RateLimitError
         failures = 0
         while True:
             now = time.time()
@@ -199,12 +202,17 @@ class Agent:
                     delay = 10.0
                 self._cooldown[model] = time.time() + delay
                 emit("llm.rate_limited", model=model, retry_after=delay)
-            except (APIConnectionError, InternalServerError) as e:  # includes timeouts
+            except (APIConnectionError, InternalServerError) as e:  # includes timeouts; before APIStatusError (subclass)
                 failures += 1
                 emit("llm.transient_error", model=model, error=type(e).__name__)
                 if failures >= 6:
                     raise
                 self._cooldown[model] = time.time() + 3
+            except APIStatusError as e:
+                if e.status_code != 413:  # 413: request bigger than this model's per-request limit
+                    raise
+                self._cooldown[model] = time.time() + 300
+                emit("llm.too_large", model=model)
 
     async def _loop_openai(self, question: str, history: list, stats: RunStats) -> None:
         """Chat-completions tool loop for OpenAI-compatible providers (Groq, Gemini, OpenRouter)."""
@@ -350,6 +358,9 @@ class Agent:
         return stats
 
     async def _finish(self, stats: RunStats, t0: float) -> None:
+        if self.fusion:  # Hebbian learning: repeated multi-step workflows get fused by Synapse
+            for r in self.fusion.observe(stats.trace):
+                self.fusion_tasks.append(asyncio.create_task(self.fusion.fuse(r["system"], r["chain"])))
         stats.peak_live_tools = max(stats.peak_live_tools, self.grafts.peak_tools)
         if self.auto_prune:
             await self.grafts.prune()

@@ -5,8 +5,6 @@ each region and team today, and paging an on-call person about an incident.
 """
 from __future__ import annotations
 
-from typing import Literal
-
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
@@ -33,7 +31,8 @@ PAGES: list[dict] = []
 class PageIn(BaseModel):
     staff_id: str
     message: str
-    severity: Literal["low", "high", "critical"] = "high"
+    # low | high | critical
+    severity: str = "high"
 
 
 def _staff(staff_id: str) -> dict:
@@ -75,7 +74,9 @@ def get_oncall(region: str):
 
 @app.post("/pages")
 def page_staff(body: PageIn):
-    """Page (alert) a staff member about an incident. Sends a real notification."""
+    """Page (alert) a staff member about an incident; sends a real notification. Required: staff_id (EMP-*), message. Optional: severity (low|high|critical, default high)."""
+    if body.severity not in {"low", "high", "critical"}:
+        raise HTTPException(422, f"severity must be low, high or critical, got {body.severity!r}")
     _staff(body.staff_id)
     page = {"id": f"PG-{600 + len(PAGES)}", **body.model_dump(), "status": "sent"}
     PAGES.append(page)

@@ -19,13 +19,13 @@ from .config import System
 from .events import emit
 from .graft import GraftManager
 
-IGNORED = ("synapse_auto_server",)
+IGNORED = ("synapse_auto_server",)  # plus any *_server.py Synapse Custom output (see _fingerprint)
 
 
 def _fingerprint(path: Path) -> dict[str, float]:
     fp = {}
     for f in path.rglob("*.py"):
-        if any(part.startswith(".") or part == "__pycache__" for part in f.parts) or f.name.startswith(IGNORED):
+        if any(part.startswith(".") or part == "__pycache__" for part in f.parts) or f.name.startswith(IGNORED) or f.name.endswith("_server.py"):
             continue
         try:
             fp[str(f)] = f.stat().st_mtime
@@ -42,13 +42,15 @@ class Sentinel:
         self.grafts = grafts
         self.on_drift = on_drift or (lambda d: None)
         self.interval = interval
-        self._prints = {name: _fingerprint(s.path) for name, s in systems.items()}
+        self._prints = {name: _fingerprint(s.path) for name, s in systems.items() if s.mode != "fused"}
 
     async def run(self) -> None:
         emit("sentinel.watching", systems=list(self.systems))
         while True:
             await asyncio.sleep(self.interval)
-            for name, s in self.systems.items():
+            for name, s in list(self.systems.items()):
+                if s.mode == "fused" or name not in self._prints:
+                    continue
                 fp = _fingerprint(s.path)
                 if fp != self._prints[name]:
                     await asyncio.sleep(0.8)  # debounce editor saves

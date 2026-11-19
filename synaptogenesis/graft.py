@@ -225,6 +225,10 @@ class GraftManager:
             text = json.dumps(res.structuredContent)
         emit("tool.result", system=system, tool=name, ok=not res.isError, ms=int((time.perf_counter() - t0) * 1000),
              chars=len(text))
+        if res.isError and "Client Error" in text:
+            # Synapse passthrough tools drop the API's error body; tell the agent what a 4xx means.
+            text += (" | The API rejected these arguments. Re-read the tool description for REQUIRED fields and "
+                     "allowed values, then call again with all of them. Do not guess different amounts.")
         return text[:20000], bool(res.isError)
 
     async def warm(self, read_only: bool = True, reset: bool = False) -> list[dict]:
@@ -265,7 +269,7 @@ class GraftManager:
             self.grafts[s.name] = g
             emit("prewarm", system=s.name, endpoints=len(specs), ms=int((time.perf_counter() - t0) * 1000))
             return {"system": s.name, "endpoints": len(specs), "ms": int((time.perf_counter() - t0) * 1000)}
-        return list(await asyncio.gather(*(one(s) for s in self.systems.values())))
+        return list(await asyncio.gather(*(one(s) for s in self.systems.values() if s.mode != "fused")))
 
     async def close(self) -> None:
         for g in list(self.grafts.values()):
@@ -298,6 +302,16 @@ class GraftManager:
             return {}
 
     def _build(self, system: System, endpoints: list[str]) -> tuple[dict, int, str | None]:
+        if system.mode == "fused":
+            # Already composed by Synapse Custom mode and verified in a sandbox; just run it.
+            from .fusion import server_file as fused_file
+            files = {fused_file(system.name, self.atlas.by_spec(system.name, e).tool) for e in endpoints
+                     if self.atlas.by_spec(system.name, e)}
+            files.discard(None)
+            if len(files) != 1:
+                raise GraftError(f"Graft one fused tool at a time from {system.name}.")
+            cfg = {"command": sys.executable, "args": [files.pop()], "env": {"PYTHONPATH": str(system.path)}}
+            return self._finalize_cfg(system, cfg), 0, None
         if system.mode == "hosted":
             # Synapse keeps the hosted server config in the cloud. If it already serves these
             # endpoints, connect to it as is (a rebuild is free but takes ~6-10 s).

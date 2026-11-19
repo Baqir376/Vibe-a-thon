@@ -81,6 +81,16 @@ def local_env() -> dict[str, str]:
     return {"SYNAPSE_LLM_PROVIDER": "ollama"}
 
 
+def fusion_env() -> dict[str, str]:
+    """Env for a --local Custom build, which needs a real model: use the first free key we have."""
+    if os.environ.get("SYNAPSE_LLM_PROVIDER"):
+        return {}
+    for provider, key in (("groq", "GROQ_API_KEY"), ("openrouter", "OPENROUTER_API_KEY"), ("anthropic", "ANTHROPIC_API_KEY")):
+        if os.environ.get(key):
+            return {"SYNAPSE_LLM_PROVIDER": provider}
+    return {}
+
+
 def parse_mcp_snippet(stdout: str) -> dict | None:
     """Extract the {"mcpServers": {...}} JSON Synapse prints after a build; return the single server entry."""
     idx = stdout.find('"mcpServers"')

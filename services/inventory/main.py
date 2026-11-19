@@ -146,7 +146,7 @@ def get_batches_expiring_within(days: int):
 
 @app.post("/reservations")
 def create_reservation(body: ReservationIn):
-    """Reserve stock in a warehouse for a customer order. Fails if not enough is available."""
+    """Reserve stock for a customer order. Required: warehouse_id (WH-PUNE|WH-MUM|WH-BLR), sku, qty (integer), order_id (ORD-*). Fails if not enough is available."""
     avail = _available(body.warehouse_id, body.sku)
     if body.qty > avail:
         raise HTTPException(409, f"Only {avail} units of {body.sku} available in {body.warehouse_id}")
@@ -163,7 +163,7 @@ def list_reservations(order_id: Optional[str] = None):
 
 @app.post("/purchase-orders")
 def create_purchase_order(body: PurchaseOrderIn):
-    """Create a DRAFT purchase order to restock a warehouse. Drafts are not sent to suppliers."""
+    """Create a DRAFT purchase order to restock a warehouse (not sent to suppliers). Required: warehouse_id (WH-*), lines (list of {sku, qty}). Optional: note."""
     for line in body.lines:
         if line.sku not in PRODUCTS:
             raise HTTPException(404, f"Unknown SKU {line.sku}")

@@ -61,13 +61,28 @@ def on_event(ev: dict) -> None:
             say("dim", f"  ◎ sentinel: {ev['system']} changed, endpoint surface unchanged ({ev['rescan_ms']} ms)")
         for sm in ev.get("smoke", []):
             say("green" if sm["ok"] else "red", f"    smoke test {sm['endpoint']}: {'OK' if sm['ok'] else 'FAILED'}")
+    elif k == "fusion.observed":
+        say("dim", f"  ⧉ hebbian: {ev['system']} chain {' > '.join(ev['chain'])} seen {ev['count']}/{ev['threshold']}")
+    elif k == "fusion.start":
+        say("magenta", f"  ⧉ synapse build --custom: fusing {ev['system']}: {' > '.join(ev['chain'])}")
+    elif k == "fusion.built":
+        say("magenta", f"  ⧉ Synapse composed '{ev['tool']}' in {ev['build_ms']} ms → verifying in a sandbox")
+    elif k == "fusion.verified":
+        for c in ev["report"]["checks"]:
+            say("green" if c["ok"] else "red", f"    {'✓' if c['ok'] else '✖'} {c['check']}")
+    elif k == "fusion.wired":
+        say("green", f"  ⧉ new verified tool {ev['system']}.{ev['tool']} replaces {' > '.join(ev['chain'])}")
+    elif k == "fusion.failed":
+        say("red", f"  ⧉ fusion rejected ({ev.get('stage')}): " + json.dumps(ev.get("report", ev.get("error")))[:400])
     elif k in ("graft.denied", "graft.failed", "graft.declined"):
         say("red", f"  ✖ {k}: {ev}")
 
 
 def setup():
+    from .fusion import load_into
     systems = load_systems()
     atlas = Atlas.load_or_build(systems)
+    load_into(systems, atlas)  # verified fused tools from earlier sessions
     gm = GraftManager(systems, atlas, load_policy(), console_approver)
     return systems, atlas, gm
 
@@ -134,9 +149,13 @@ async def cmd_ask(question: str, keep: bool = False, prewarm: bool = False) -> N
     systems, atlas, gm = setup()
     if prewarm:
         await do_prewarm(gm)
-    agent = Agent(gm, atlas, on_step=print_step, auto_prune=not keep)
+    from .fusion import Fusion
+    agent = Agent(gm, atlas, on_step=print_step, auto_prune=not keep, fusion=Fusion(systems, atlas))
     try:
         stats = await agent.ask(question)
+        if agent.fusion_tasks:
+            say("magenta", "  ⧉ a repeated workflow was detected: Synapse is fusing it (Custom mode) ...")
+            await asyncio.gather(*agent.fusion_tasks)
     finally:
         await gm.close()
     say("bold", "\n" + stats.answer)
@@ -152,7 +171,8 @@ async def cmd_chat(prewarm: bool = False) -> None:
     if prewarm:
         await do_prewarm(gm)
     from .sentinel import Sentinel
-    agent = Agent(gm, atlas, on_step=print_step, auto_prune=True)
+    from .fusion import Fusion
+    agent = Agent(gm, atlas, on_step=print_step, auto_prune=True, fusion=Fusion(systems, atlas))
     sentinel_task = asyncio.create_task(Sentinel(systems, atlas, gm).run())
     say("bold", f"Synaptogenesis — {len(atlas.caps)} endpoints in the atlas, 0 live tools. "
                 f"Drift Sentinel watching {len(systems)} systems. Ctrl-C to exit.")
@@ -179,6 +199,9 @@ def main() -> None:
     sub.add_parser("selftest")
     wb = sub.add_parser("web", help="neural-map dashboard (agent + Sentinel + approvals) at http://127.0.0.1:8700")
     wb.add_argument("--port", type=int, default=8700); wb.add_argument("--prewarm", action="store_true")
+    fz = sub.add_parser("fuse", help="manually fuse a chain of tools via Synapse Custom mode (normally automatic)")
+    fz.add_argument("system"); fz.add_argument("chain", help="comma-separated tool names, e.g. get_ticket,create_refund")
+    fz.add_argument("--args", default="{}", help="JSON inputs to replay during verification")
     sub.add_parser("sentinel", help="watch the systems' code and keep the atlas in sync via synapse --discover")
     w = sub.add_parser("warm", help="pre-build hosted Synapse servers (read-only endpoints) before a demo")
     w.add_argument("--reset", action="store_true", help="drop endpoints added by earlier grafts")
@@ -199,6 +222,15 @@ def main() -> None:
         from .web import build_app
         say("bold", f"Synaptogenesis dashboard → http://127.0.0.1:{args.port}")
         uvicorn.run(build_app(prewarm=args.prewarm), host="127.0.0.1", port=args.port, log_level="warning")
+    elif args.cmd == "fuse":
+        async def run_fuse():
+            from .fusion import Fusion
+            systems, atlas, gm = setup()
+            chain = [{"tool": t.strip(), "input": json.loads(args.args)} for t in args.chain.split(",")]
+            res = await Fusion(systems, atlas).fuse(args.system, chain)
+            say("bold", json.dumps({k: v for k, v in res.items() if k != "report"}))
+            await gm.close()
+        asyncio.run(run_fuse())
     elif args.cmd == "sentinel":
         async def run_sentinel():
             from .sentinel import Sentinel

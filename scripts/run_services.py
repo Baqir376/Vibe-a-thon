@@ -34,7 +34,7 @@ def up(port: int, probe: str) -> bool:
 
 
 def fingerprint(path: Path) -> dict[str, float]:
-    return {str(f): f.stat().st_mtime for f in path.glob("*.py") if not f.name.startswith("synapse_auto_server")}
+    return {str(f): f.stat().st_mtime for f in path.glob("*.py") if not (f.name.startswith("synapse_auto_server") or f.name.endswith("_server.py"))}
 
 
 def start(name: str, port: int) -> subprocess.Popen:

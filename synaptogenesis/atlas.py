@@ -118,6 +118,8 @@ class Atlas:
     def __init__(self, caps: list[Capability], systems: dict[str, System]):
         self.caps = caps
         self.systems = systems
+        # (system, tool) data-changing steps replaced by a verified fused workflow: hidden from search
+        self.superseded: set[tuple[str, str]] = set()
 
     @classmethod
     def build(cls, systems: dict[str, System]) -> "Atlas":
@@ -132,14 +134,16 @@ class Atlas:
     def load_or_build(cls, systems: dict[str, System]) -> "Atlas":
         if ATLAS_FILE.exists():
             data = json.loads(ATLAS_FILE.read_text(encoding="utf-8"))
-            if set(data.get("systems", [])) == set(systems):
+            if set(data.get("systems", [])) == {n for n, s in systems.items() if s.mode != "fused"}:
                 return cls([Capability(**c) for c in data["capabilities"]], systems)
         return cls.build(systems)
 
     def save(self) -> None:
         STATE_DIR.mkdir(exist_ok=True)
-        ATLAS_FILE.write_text(json.dumps({"systems": list(self.systems),
-                                          "capabilities": [asdict(c) for c in self.caps]}, indent=1), encoding="utf-8")
+        real = [n for n, s in self.systems.items() if s.mode != "fused"]
+        ATLAS_FILE.write_text(json.dumps({"systems": real,
+                                          "capabilities": [asdict(c) for c in self.caps if c.system in real]},
+                                         indent=1), encoding="utf-8")
 
     def replace_system(self, system: str, caps: list[Capability]) -> tuple[list[Capability], list[Capability]]:
         """Swap in a rescanned surface; return (added, removed)."""
@@ -165,15 +169,20 @@ class Atlas:
         q = set(self._tokens(query))
         scored = []
         for c in self.caps:
+            if (c.system, c.tool) in self.superseded:
+                continue
             sys_desc = self.systems[c.system].description if c.system in self.systems else ""
             strong = set(self._tokens(f"{c.tool} {c.path}"))
             weak = set(self._tokens(c.description))
             ctx = set(self._tokens(f"{c.system} {sys_desc}"))
             score = 3 * len(q & strong) + 2 * len(q & weak) + 0.5 * len(q & ctx)
+            if score and c.system.endswith("_fused"):
+                score += 3  # a verified one-step workflow beats assembling the steps by hand
             if score:
                 scored.append((score, c))
-        scored.sort(key=lambda x: (-x[0], x[1].mutating))
-        return [{"system": c.system, "endpoint": c.spec, "tool": c.tool, "description": c.description,
+        scored.sort(key=lambda x: (-x[0], x[1].mutating and not x[1].system.endswith("_fused")))
+        return [{"system": c.system, "endpoint": c.spec, "tool": c.tool,
+                 "description": ("[VERIFIED ONE-STEP WORKFLOW] " if c.system.endswith("_fused") else "") + c.description,
                  "params": c.params, "changes_data": c.mutating} for _, c in scored[:k]]
 
     def summary(self) -> list[dict]:
