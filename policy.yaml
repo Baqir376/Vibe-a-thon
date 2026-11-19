@@ -1,0 +1,11 @@
+# Least privilege by construction.
+# deny: endpoints that may NEVER be grafted. Pattern: "<system>:<METHOD> <path>" (fnmatch).
+deny:
+  - "*:DELETE *"
+  - "orders:POST /shipments/*/reroute"   # rerouting cold-chain stock is a human decision
+
+# Grafting these methods, and every call to them, needs a human "yes".
+require_approval_methods: [POST, PUT, PATCH, DELETE]
+
+# The agent's working set never exceeds this many live business tools.
+max_live_tools: 12

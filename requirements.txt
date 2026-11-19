@@ -1,0 +1,7 @@
+# Orchestrator (synaptogenesis) + the two Python legacy services
+anthropic>=2.10
+mcp>=1.30,<2          # Synapse-generated servers import mcp.server.fastmcp (removed in mcp 2.x)
+requests>=2.31        # used by Synapse-generated passthrough servers
+pyyaml>=6
+fastapi>=0.110
+uvicorn[standard]>=0.29

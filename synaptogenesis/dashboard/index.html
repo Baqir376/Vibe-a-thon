@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Synaptogenesis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #070b14; --panel: #0d1424; --panel2: #111a2e; --line: #1d2a44; --text: #e6edf7; --muted: #8494b2;
+    --read: #38d6f5; --write: #ffb547; --live: #7cf5c4; --dormant: #3a4a6b; --drift: #ffd84d; --danger: #ff6b81;
+    --core: #a78bfa;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: Inter, system-ui, sans-serif; }
+  body { display: grid; grid-template-columns: 1fr 400px; height: 100vh; overflow: hidden; }
+  #mapwrap { position: relative; overflow: hidden;
+    background: radial-gradient(ellipse at 50% 50%, #0f1a33 0%, var(--bg) 70%); }
+  svg { width: 100%; height: 100%; display: block; }
+  .brand { position: absolute; left: 24px; top: 18px; pointer-events: none; }
+  .brand h1 { margin: 0; font-size: 22px; letter-spacing: .5px; font-weight: 700; }
+  .brand h1 span { color: var(--core); }
+  .brand p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+  .legend { position: absolute; left: 24px; bottom: 18px; display: flex; gap: 16px; font-size: 12px; color: var(--muted); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+  .counter { position: absolute; right: 24px; top: 18px; text-align: right; }
+  .counter .big { font-size: 44px; font-weight: 700; font-family: 'JetBrains Mono', monospace; line-height: 1; }
+  .counter .big small { font-size: 18px; color: var(--muted); font-weight: 400; }
+  .counter .lbl { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px; }
+
+  aside { background: var(--panel); border-left: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--line); }
+  .stat { padding: 14px 10px; text-align: center; border-right: 1px solid var(--line); }
+  .stat:last-child { border-right: 0; }
+  .stat b { display: block; font-family: 'JetBrains Mono', monospace; font-size: 20px; }
+  .stat span { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; }
+  .ask { padding: 16px; border-bottom: 1px solid var(--line); }
+  textarea { width: 100%; height: 74px; resize: none; background: var(--panel2); color: var(--text); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 14px; outline: none; }
+  textarea:focus { border-color: var(--core); }
+  .row { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
+  button { background: var(--core); color: #120b2b; border: 0; border-radius: 9px; padding: 9px 16px; font-weight: 600;
+    font-size: 14px; cursor: pointer; }
+  button:disabled { opacity: .45; cursor: default; }
+  button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); font-weight: 500; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .chip { font-size: 11.5px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
+  .chip:hover { color: var(--text); border-color: var(--core); }
+  .status { font-size: 12px; color: var(--muted); margin-left: auto; }
+  .answer { padding: 14px 16px; border-bottom: 1px solid var(--line); font-size: 13.5px; line-height: 1.55; max-height: 42vh; overflow: auto; }
+  .answer:empty { display: none; }
+  .answer .meta { font-size: 11.5px; color: var(--muted); margin-top: 8px; font-family: 'JetBrains Mono', monospace; }
+  .answer ul { margin: 4px 0; padding-left: 18px; }
+  .cite { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--live); background: #10302a; border-radius: 4px; padding: 0 4px; }
+  .log { flex: 1; overflow: auto; padding: 8px 0; font-size: 12px; font-family: 'JetBrains Mono', monospace; min-height: 0; }
+  .log div { padding: 3px 16px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .log .g { color: var(--live); } .log .b { color: var(--core); } .log .d { color: var(--drift); } .log .r { color: var(--danger); }
+  .log .c { color: var(--read); } .log .w { color: var(--write); }
+
+  .modal { position: fixed; inset: 0; background: rgba(3,6,12,.7); display: none; align-items: center; justify-content: center; z-index: 10; }
+  .modal.on { display: flex; }
+  .card { width: 440px; background: var(--panel2); border: 1px solid var(--write); border-radius: 14px; padding: 20px; box-shadow: 0 0 60px rgba(255,181,71,.15); }
+  .card h3 { margin: 0 0 6px; color: var(--write); font-size: 16px; }
+  .card pre { background: var(--bg); border-radius: 8px; padding: 10px; font-size: 12px; white-space: pre-wrap; max-height: 220px; overflow: auto; }
+
+  .node-label { font-size: 13px; font-weight: 600; fill: var(--text); text-anchor: middle; pointer-events: none; }
+  .node-sub { font-size: 10px; fill: var(--muted); text-anchor: middle; pointer-events: none; font-family: 'JetBrains Mono', monospace; }
+  .ep-label { font-size: 9.5px; fill: var(--muted); font-family: 'JetBrains Mono', monospace; pointer-events: none; }
+  .ep-label.on { fill: var(--text); }
+  .floater { font-size: 12px; font-family: 'JetBrains Mono', monospace; font-weight: 600; text-anchor: middle; pointer-events: none; }
+  @keyframes flow { to { stroke-dashoffset: -24; } }
+  .link-live { animation: flow .8s linear infinite; }
+  @keyframes breathe { 0%,100% { opacity: .55; } 50% { opacity: 1; } }
+  .core-glow { animation: breathe 3s ease-in-out infinite; }
+  .core-busy { animation: breathe .7s ease-in-out infinite; }
+</style>
+</head>
+<body>
+<div id="mapwrap">
+  <svg id="map" viewBox="0 0 1200 820" preserveAspectRatio="xMidYMid meet">
+    <defs>
+      <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <radialGradient id="coreGrad"><stop offset="0%" stop-color="#c4b5fd"/><stop offset="60%" stop-color="#7c3aed"/><stop offset="100%" stop-color="#2e1065"/></radialGradient>
+      <radialGradient id="sysGrad"><stop offset="0%" stop-color="#1e2b4d"/><stop offset="100%" stop-color="#0d1424"/></radialGradient>
+      <pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="#16213a"/></pattern>
+    </defs>
+    <rect width="1200" height="820" fill="url(#dots)"/>
+    <g id="dendrites"></g><g id="links"></g><g id="systems"></g><g id="endpoints"></g><g id="core"></g><g id="fx"></g>
+  </svg>
+  <div class="brand"><h1>Synapto<span>genesis</span></h1><p>An agent that grows its own tools, built live by Synapse</p></div>
+  <div class="counter"><div class="big" id="liveBig">0<small> / 0</small></div><div class="lbl">live tools</div></div>
+  <div class="legend">
+    <span><i style="background:var(--read)"></i>read endpoint</span>
+    <span><i style="background:var(--write)"></i>writes data</span>
+    <span><i style="background:var(--live);box-shadow:0 0 8px var(--live)"></i>grafted (live)</span>
+    <span><i style="border:1.5px solid var(--dormant)"></i>dormant</span>
+    <span><i style="background:var(--drift)"></i>new (Sentinel)</span>
+  </div>
+</div>
+
+<aside>
+  <div class="stats">
+    <div class="stat"><b id="sBuilds">0</b><span>Synapse builds</span></div>
+    <div class="stat"><b id="sGrafts">0</b><span>grafts</span></div>
+    <div class="stat"><b id="sCalls">0</b><span>tool calls</span></div>
+    <div class="stat"><b id="sPeak">0</b><span>peak tools</span></div>
+  </div>
+  <div class="ask">
+    <textarea id="q" placeholder="Ask about Meridian's operations…">The insulin shipment to Pune is delayed. Which customers are affected, have they raised support tickets, and who is on call to handle it?</textarea>
+    <div class="row"><button id="go">Ask agent</button><button class="ghost" id="warm" title="Synapse builds every system's read-only surface; nothing is exposed">Prewarm</button><span class="status" id="status">idle</span></div>
+    <div class="chips">
+      <span class="chip">Which items are low on stock in Pune and where else can we get them?</span>
+      <span class="chip">Is there a revised ETA for shipment SHP-1042?</span>
+      <span class="chip">Draft a purchase order to restock low insulin in Pune</span>
+      <span class="chip">Who manages Sahyadri Diabetes Clinic's account?</span>
+    </div>
+  </div>
+  <div class="answer" id="answer"></div>
+  <div class="log" id="log"></div>
+</aside>
+
+<div class="modal" id="modal"><div class="card">
+  <h3 id="mTitle">Approval needed</h3>
+  <div style="font-size:13px;color:var(--muted)" id="mSub"></div>
+  <pre id="mBody"></pre>
+  <div class="row" style="justify-content:flex-end"><button class="ghost" id="mNo">Decline</button><button id="mYes" style="background:var(--write)">Approve</button></div>
+</div></div>
+
+<script>
+const NS = "http://www.w3.org/2000/svg";
+const C = { x: 600, y: 410 };
+const SYS_POS = { orders: -148, inventory: -36, tickets: 36, roster: 148 };  // degrees around the core
+const RX_SYS = 330, RY_SYS = 235, R_EP = 118;  // systems sit on an ellipse
+const $ = (id) => document.getElementById(id);
+const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+let S = { systems: [], caps: [], sysPos: {}, ep: {}, links: {}, live: new Set(), dormant: new Set(),
+          builds: 0, grafts: 0, calls: 0, peak: 0, toolToSpec: {} };
+const key = (sys, spec) => sys + "|" + spec;
+
+function polar(cx, cy, r, deg) { const a = deg * Math.PI / 180; return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) }; }
+
+function layout() {
+  ["dendrites", "links", "systems", "endpoints", "core"].forEach(id => $(id).innerHTML = "");
+  S.ep = {}; S.links = {};
+  // core
+  const core = $("core");
+  el("circle", { cx: C.x, cy: C.y, r: 62, fill: "url(#coreGrad)", opacity: .25, class: "core-glow", id: "coreHalo", filter: "url(#glow)" }, core);
+  el("circle", { cx: C.x, cy: C.y, r: 40, fill: "url(#coreGrad)" }, core);
+  el("text", { x: C.x, y: C.y - 2, class: "node-label", style: "font-size:14px" }, core).textContent = "AGENT";
+  el("text", { x: C.x, y: C.y + 15, class: "node-sub", style: "fill:#efeaff;font-size:10.5px", id: "coreSub" }, core).textContent = "0 tools at start";
+
+  const angles = {}; let i = 0;
+  S.systems.forEach(s => { angles[s.name] = SYS_POS[s.name] ?? (-150 + 100 * i); i++; });
+  S.systems.forEach(s => {
+    const a = angles[s.name] * Math.PI / 180;
+    const p = { x: C.x + RX_SYS * Math.cos(a), y: C.y + RY_SYS * Math.sin(a) }; S.sysPos[s.name] = p;
+    const g = el("g", {}, $("systems"));
+    el("line", { x1: C.x, y1: C.y, x2: p.x, y2: p.y, stroke: "#1a2742", "stroke-width": 1.2, "stroke-dasharray": "2 6" }, $("dendrites"));
+    el("circle", { cx: p.x, cy: p.y, r: 36, fill: "url(#sysGrad)", stroke: "#2b3d63", "stroke-width": 1.5, id: "sys-" + s.name }, g);
+    el("text", { x: p.x, y: p.y + 1, class: "node-label" }, g).textContent = s.name;
+    el("text", { x: p.x, y: p.y + 15, class: "node-sub" }, g).textContent = s.mode === "hosted" ? "synapse hosted" : "synapse local";
+    const caps = S.caps.filter(c => c.system === s.name);
+    const n = caps.length, spread = Math.min(236, 22 * n);
+    caps.forEach((c, j) => placeEndpoint(c, s.name, angles[s.name], n > 1 ? -spread / 2 + spread * j / (n - 1) : 0));
+  });
+  refreshCounters();
+}
+
+function placeEndpoint(c, sys, sysAngle, offset) {
+  const sp = S.sysPos[sys];
+  const p = polar(sp.x, sp.y, R_EP, sysAngle + offset);
+  el("line", { x1: sp.x, y1: sp.y, x2: p.x, y2: p.y, stroke: "#1c2a47", "stroke-width": 1 }, $("dendrites"));
+  const g = el("g", { style: "cursor:default" }, $("endpoints"));
+  const dot = el("circle", { cx: p.x, cy: p.y, r: 5.5, fill: c.mutating ? "var(--write)" : "var(--read)", opacity: .35 }, g);
+  const outward = Math.cos((sysAngle + offset) * Math.PI / 180) >= 0;
+  const lbl = el("text", { x: p.x + (outward ? 10 : -10), y: p.y + 3, class: "ep-label", "text-anchor": outward ? "start" : "end" }, g);
+  lbl.textContent = c.spec.replace(/\{[^}]+\}/g, "{…}");
+  const t = el("title", {}, g); t.textContent = `${sys} · ${c.spec}\n${c.description || ""}`;
+  S.ep[key(sys, c.spec)] = { dot, lbl, p, c, sys };
+  S.toolToSpec[sys + "__" + c.tool] = c.spec;
+}
+
+function linkPath(sys, spec) {
+  const e = S.ep[key(sys, spec)]; if (!e) return null;
+  const sp = S.sysPos[sys];
+  return `M ${C.x} ${C.y} Q ${sp.x} ${sp.y} ${e.p.x} ${e.p.y}`;
+}
+
+function setLive(sys, spec, on) {
+  const k = key(sys, spec), e = S.ep[k]; if (!e) return;
+  let L = S.links[k];
+  if (on) {
+    S.live.add(k); S.dormant.delete(k);
+    if (!L) {
+      L = el("path", { d: linkPath(sys, spec), fill: "none", stroke: "var(--live)", "stroke-width": 2.2, filter: "url(#glow)",
+                       "stroke-dasharray": "8 4", class: "link-live", opacity: 0 }, $("links"));
+      S.links[k] = L;
+    }
+    L.setAttribute("stroke", e.c.mutating ? "var(--write)" : "var(--live)");
+    L.setAttribute("class", "link-live"); L.setAttribute("stroke-dasharray", "8 4"); L.setAttribute("stroke-width", 2.2);
+    L.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 500, fill: "forwards" });
+    e.dot.setAttribute("opacity", 1); e.dot.setAttribute("r", 7.5); e.dot.setAttribute("filter", "url(#glow)");
+    e.dot.setAttribute("fill", e.c.mutating ? "var(--write)" : "var(--live)");
+    e.lbl.classList.add("on");
+  } else {
+    S.live.delete(k); S.dormant.add(k);
+    if (L) { L.setAttribute("class", ""); L.setAttribute("stroke", "var(--dormant)"); L.setAttribute("stroke-width", 1.2);
+             L.setAttribute("stroke-dasharray", "3 6"); L.removeAttribute("filter"); }
+    e.dot.setAttribute("opacity", .9); e.dot.setAttribute("r", 5.5); e.dot.removeAttribute("filter");
+    e.dot.setAttribute("fill", "none"); e.dot.setAttribute("stroke", "var(--dormant)"); e.dot.setAttribute("stroke-width", 1.6);
+    e.lbl.classList.remove("on");
+  }
+  refreshCounters();
+}
+
+function pulse(sys, spec, color = "#ffffff") {
+  const L = S.links[key(sys, spec)]; if (!L) return;
+  const len = L.getTotalLength(), dot = el("circle", { r: 4.5, fill: color, filter: "url(#glow)" }, $("fx"));
+  const t0 = performance.now(), dur = 700;
+  (function step(t) {
+    const f = Math.min((t - t0) / dur, 1), back = f > .5, u = back ? (1 - f) * 2 : f * 2;
+    const pt = L.getPointAtLength(len * u); dot.setAttribute("cx", pt.x); dot.setAttribute("cy", pt.y);
+    if (f < 1) requestAnimationFrame(step); else dot.remove();
+  })(t0);
+}
+
+function floater(x, y, text, color) {
+  const t = el("text", { x, y, class: "floater", fill: color }, $("fx")); t.textContent = text;
+  t.animate([{ transform: "translateY(0)", opacity: 1 }, { transform: "translateY(-34px)", opacity: 0 }], { duration: 2600, easing: "ease-out" }).onfinish = () => t.remove();
+}
+
+function ring(sys, color) {
+  const p = S.sysPos[sys]; if (!p) return;
+  const c = el("circle", { cx: p.x, cy: p.y, r: 36, fill: "none", stroke: color, "stroke-width": 2 }, $("fx"));
+  c.animate([{ r: 36, opacity: 1 }, { r: 90, opacity: 0 }], { duration: 1100, easing: "ease-out" }).onfinish = () => c.remove();
+  c.animate; // r animation via attribute fallback
+  let t0 = performance.now(); (function step(t) { const f = Math.min((t - t0) / 1100, 1); c.setAttribute("r", 36 + 54 * f); c.setAttribute("opacity", 1 - f); if (f < 1) requestAnimationFrame(step); })(t0);
+}
+
+function refreshCounters() {
+  const total = S.caps.length, live = S.live.size;
+  S.peak = Math.max(S.peak, live);
+  $("liveBig").innerHTML = `${live}<small> / ${total}</small>`;
+  $("sBuilds").textContent = S.builds; $("sGrafts").textContent = S.grafts; $("sCalls").textContent = S.calls; $("sPeak").textContent = S.peak;
+  $("coreSub").textContent = live ? `${live} live tool${live > 1 ? "s" : ""}` : "0 tools";
+}
+
+function log(text, cls = "") { const d = document.createElement("div"); d.className = cls; d.textContent = text; d.title = text;
+  const L = $("log"); L.prepend(d); while (L.children.length > 250) L.lastChild.remove(); }
+
+function md(text) {
+  let h = esc(text || "");
+  h = h.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/`([^`]+)`/g, "<code>$1</code>")
+       .replace(/\[([a-z]+\.[a-z_0-9]+)\]/g, '<span class="cite">$1</span>');
+  const lines = h.split(/\n/); let out = "", inList = false;
+  for (const ln of lines) {
+    const m = ln.match(/^\s*[-*•]\s+(.*)/);
+    if (m) { if (!inList) { out += "<ul>"; inList = true; } out += `<li>${m[1]}</li>`; }
+    else { if (inList) { out += "</ul>"; inList = false; } if (ln.trim()) out += `<div>${ln}</div>`; }
+  }
+  return out + (inList ? "</ul>" : "");
+}
+
+function setBusy(b) { $("go").disabled = b; $("status").textContent = b ? "agent working…" : "idle";
+  $("coreHalo") && $("coreHalo").setAttribute("class", b ? "core-busy" : "core-glow"); }
+
+// ------------------------------------------------------------------ events
+function onEvent(ev) {
+  const k = ev.kind;
+  if (k === "ask") { log(`? ${ev.question}`, "b"); }
+  else if (k === "atlas.search") { log(`  find_capability "${ev.query}" → ${ev.hits} hits`); }
+  else if (k === "graft.start") { log(`⟡ graft ${ev.system} ← ${ev.endpoints.join(", ")}`, "b"); }
+  else if (k === "graft.done") {
+    S.grafts++;
+    const before = new Set([...S.live].filter(x => x.startsWith(ev.system + "|")));
+    const now = new Set(ev.endpoints.map(sp => key(ev.system, sp)));
+    now.forEach(x => { if (!before.has(x)) setLive(ev.system, x.split("|")[1], true); });
+    const p = S.sysPos[ev.system];
+    if (ev.how === "built") { S.builds++; ring(ev.system, "var(--core)"); floater(p.x, p.y - 48, `synapse build ${(ev.build_ms / 1000).toFixed(1)}s`, "#c4b5fd"); }
+    else if (ev.how === "reactivated") { ring(ev.system, "var(--live)"); floater(p.x, p.y - 48, "reactivated 0 ms", "#7cf5c4"); }
+    else { ring(ev.system, "var(--read)"); floater(p.x, p.y - 48, `connected ${(ev.connect_ms / 1000).toFixed(1)}s`, "#38d6f5"); }
+    log(`  ✓ ${ev.system}: ${ev.tools.length} tool(s) · ${ev.how}${ev.how === "built" ? " " + ev.build_ms + "ms" : ""}`, "g");
+    refreshCounters();
+  }
+  else if (k === "prune") {
+    [...S.live].filter(x => x.startsWith(ev.system + "|")).forEach(x => setLive(ev.system, x.split("|")[1], false));
+    log(`✂ prune ${ev.system} (dormant)`);
+  }
+  else if (k === "tool.call") {
+    S.calls++; refreshCounters();
+    const spec = S.toolToSpec[ev.system + "__" + ev.tool];
+    if (spec) pulse(ev.system, spec, "#ffffff");
+    log(`→ ${ev.system}.${ev.tool}(${JSON.stringify(ev.args || {})})`, "c");
+  }
+  else if (k === "tool.result" && !ev.ok) { log(`  ✖ ${ev.system}.${ev.tool} failed`, "r"); }
+  else if (k === "graft.denied") { log(`⛔ policy blocked ${ev.system}:${ev.endpoint}`, "r"); const p = S.sysPos[ev.system]; p && floater(p.x, p.y - 48, "policy: denied", "#ff6b81"); }
+  else if (k === "graft.declined") { log(`✋ human declined write access: ${ev.endpoints.join(", ")}`, "r"); }
+  else if (k === "approval.request") { showApproval(ev); log(`⚠ approval requested (${ev.kind})`, "w"); }
+  else if (k === "approval.resolved") { $("modal").classList.remove("on"); log(`  approval ${ev.approved ? "granted" : "declined"}`, ev.approved ? "g" : "r"); }
+  else if (k === "drift.detected") { log(`◎ Sentinel: code changed in ${ev.system} → synapse build --discover`, "d"); ring(ev.system, "var(--drift)"); }
+  else if (k === "drift") { onDrift(ev); }
+  else if (k === "prewarm") { log(`  prewarmed ${ev.system}: ${ev.endpoints} endpoints dormant (${ev.ms}ms)`, "g");
+    S.caps.filter(c => c.system === ev.system && !c.mutating).forEach(c => { const e = S.ep[key(c.system, c.spec)]; if (e && !S.live.has(key(c.system, c.spec))) { e.dot.setAttribute("fill", "none"); e.dot.setAttribute("stroke", "var(--dormant)"); e.dot.setAttribute("stroke-width", 1.6); e.dot.setAttribute("opacity", .9); } }); }
+  else if (k === "llm.rate_limited") { log(`  model ${ev.model} rate-limited → rotating`, ""); }
+  else if (k === "step" && ev.step === "text") { /* final text arrives with answer.text */ }
+  else if (k === "answer.text") {
+    setBusy(false);
+    $("answer").innerHTML = md(ev.text) + `<div class="meta">${ev.turns} turns · ${ev.tool_calls} tool calls · ${ev.grafts} grafts · peak ${ev.peak_live_tools} of ${S.caps.length} tools · ${ev.seconds}s · ${(ev.models || []).map(m => m.split(":").pop()).join(", ")}</div>`;
+    log(`✔ answered in ${ev.seconds}s`, "g");
+  }
+  else if (k === "answer.error") { setBusy(false); $("answer").innerHTML = `<div style="color:var(--danger)">${esc(ev.error)}</div>`; log("✖ " + ev.error, "r"); }
+}
+
+async function onDrift(ev) {
+  if (!ev.added.length && !ev.removed.length) { log(`  Sentinel: ${ev.system} surface unchanged`, "d"); return; }
+  const st = await (await fetch("/api/state")).json();
+  const prevLive = new Set(S.live), prevDormant = new Set(S.dormant);
+  S.caps = st.capabilities; S.live = new Set(); S.dormant = new Set(); layout();
+  prevDormant.forEach(k => { const [s, sp] = k.split("|"); if (S.ep[k]) { setLive(s, sp, true); setLive(s, sp, false); } });
+  prevLive.forEach(k => { const [s, sp] = k.split("|"); if (S.ep[k]) setLive(s, sp, true); });
+  ev.added.forEach(sp => { const e = S.ep[key(ev.system, sp)]; if (!e) return;
+    e.dot.setAttribute("fill", "var(--drift)"); e.dot.setAttribute("opacity", 1); e.dot.setAttribute("r", 8); e.dot.setAttribute("filter", "url(#glow)");
+    e.lbl.classList.add("on"); e.lbl.setAttribute("fill", "var(--drift)");
+    floater(e.p.x, e.p.y - 14, "+ " + sp, "#ffd84d"); });
+  const p = S.sysPos[ev.system];
+  ev.removed.forEach(sp => floater(p.x, p.y + 58, "− " + sp, "#ff6b81"));
+  log(`◎ Sentinel: ${ev.system} +${ev.added.length}/−${ev.removed.length} in ${ev.rescan_ms}ms ${ev.added.map(a => "+" + a).join(" ")} ${ev.removed.map(r => "−" + r).join(" ")}`, "d");
+}
+
+let pendingApproval = null;
+function showApproval(ev) {
+  pendingApproval = ev.id;
+  const d = ev.detail || {};
+  $("mTitle").textContent = ev.kind === "graft" ? "Grant write access?" : "Allow this action?";
+  $("mSub").textContent = ev.kind === "graft" ? `The agent wants Synapse to graft data-changing endpoints of ${d.system}.` : `${d.system} · ${d.endpoint}`;
+  $("mBody").textContent = JSON.stringify(ev.kind === "graft" ? { endpoints: d.endpoints, reason: d.reason } : d.args, null, 2);
+  $("modal").classList.add("on");
+}
+async function resolve(ok) { if (pendingApproval == null) return;
+  await fetch("/api/approve", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: pendingApproval, approved: ok }) });
+  pendingApproval = null; $("modal").classList.remove("on"); }
+$("mYes").onclick = () => resolve(true); $("mNo").onclick = () => resolve(false);
+
+async function ask() {
+  const q = $("q").value.trim(); if (!q) return;
+  setBusy(true); $("answer").innerHTML = "";
+  const r = await fetch("/api/ask", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: q }) });
+  if (!r.ok) { setBusy(false); const d = (await r.json()).detail; log("✖ " + (typeof d === "string" ? d : JSON.stringify(d)), "r"); }
+}
+$("go").onclick = ask;
+$("q").addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) ask(); });
+document.querySelectorAll(".chip").forEach(c => c.onclick = () => { $("q").value = c.textContent; });
+$("warm").onclick = async () => { $("warm").disabled = true; log("prewarming dormant Synapse connections…", "b"); await fetch("/api/prewarm", { method: "POST" }); $("warm").disabled = false; };
+
+(async function init() {
+  const st = await (await fetch("/api/state")).json();
+  S.systems = st.systems; S.caps = st.capabilities; layout();
+  st.grafts.forEach(g => g.exposed.forEach(sp => setLive(g.system, sp, true)));
+  setBusy(st.busy);
+  log(`models: ${st.models.map(m => m.split(":").pop()).join(" → ")}`);
+  log(`atlas: ${S.caps.length} endpoints across ${S.systems.length} systems · 0 tools live · Sentinel watching`, "g");
+  const es = new EventSource("/api/events");
+  es.onmessage = (m) => { try { onEvent(JSON.parse(m.data)); } catch (e) { console.error(e); } };
+})();
+</script>
+</body>
+</html>

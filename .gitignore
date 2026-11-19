@@ -1,0 +1,12 @@
+.synapto/
+node_modules/
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+# Synapse local build artifacts written into service repos (grafts are moved to .synapto/grafts)
+services/*/synapse_auto_server*.py
+services/*/.synapse/
+.playwright-mcp/
+services/*/.env.example

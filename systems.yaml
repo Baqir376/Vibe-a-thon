@@ -1,0 +1,27 @@
+# The company's legacy systems. Synaptogenesis starts with ZERO tools from these and
+# grafts only the endpoints a task needs, via Synapse, at the moment it needs them.
+#
+# mode: local  -> synapse build --local --auto (Python repos; writes a passthrough server file)
+# mode: hosted -> synapse build --auto (served by Synapse's cloud config + the @2ndbrainlabs-ai/synapse-mcp runner; needs SYNAPSE_API_KEY)
+# Override per system with env SYNAPTO_MODE_<NAME>=local|hosted.
+systems:
+  orders:
+    path: services/orders
+    base_url: http://127.0.0.1:8101
+    mode: hosted
+    description: Customers (clinics, pharmacies), their orders, and shipments - carrier, delays and delay reasons, rerouting. Python/FastAPI.
+  inventory:
+    path: services/inventory
+    base_url: http://127.0.0.1:8102
+    mode: local
+    description: Warehouse stock per SKU, low-stock alerts, expiring batches, stock reservations, draft purchase orders. Python/FastAPI.
+  tickets:
+    path: services/tickets
+    base_url: http://127.0.0.1:8103
+    mode: local
+    description: Customer support tickets, comments, ticket status, refunds under the refund policy. Python/FastAPI.
+  roster:
+    path: services/roster
+    base_url: http://127.0.0.1:8104
+    mode: hosted
+    description: Staff, account managers per customer, who is on call per region/team, paging staff. Python/FastAPI.
