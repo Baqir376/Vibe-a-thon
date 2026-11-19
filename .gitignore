@@ -12,3 +12,6 @@ services/*/.synapse/
 services/*/.env.example
 services/tickets/refund_ledger.json
 services/*/*_server.py
+.coverage
+.pytest_cache/
+.ruff_cache/
