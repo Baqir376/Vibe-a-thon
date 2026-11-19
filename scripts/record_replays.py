@@ -46,7 +46,7 @@ SCENARIOS = {
 
 
 def listen(events: list, stop: threading.Event, ready: threading.Event) -> None:
-    with httpx.Client(timeout=None) as c:
+    with httpx.Client(timeout=None) as c:  # nosec B113 - long-lived SSE stream to the local agent server
         with c.stream("GET", f"{API}/api/events") as r:
             ready.set()
             for line in r.iter_lines():

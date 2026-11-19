@@ -25,21 +25,21 @@ export function HowItWorks() {
       <div className="sticky top-0 flex h-screen items-center overflow-hidden">
         <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-5 lg:grid-cols-2">
           <div>
-            <p className="mb-3 font-mono text-xs tracking-[0.3em] text-signal uppercase">How it works</p>
+            <p className="mb-3 font-mono text-xs tracking-[0.3em] text-signal-ink uppercase">How it works</p>
             <h2 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">Just-in-time tools,<br /><span className="text-graphite">not pre-wired ones.</span></h2>
             <div className="relative mt-10 space-y-2">
               <div className="absolute top-2 bottom-2 left-[19px] w-px bg-line" />
               <motion.div className="absolute top-2 left-[19px] w-px origin-top bg-gradient-to-b from-violet to-live"
                 style={{ height: "calc(100% - 16px)", scaleY: scrollYProgress }} />
               {STEPS.map((s, i) => (
-                <motion.div key={s.k} animate={{ opacity: i === step ? 1 : 0.38 }} className="relative flex gap-5 py-3">
-                  <motion.div animate={{ backgroundColor: i <= step ? "#e8551f" : "#ebe4d5", borderColor: i <= step ? "#e8551f" : "#d6ccb8", scale: i === step ? 1.08 : 1 }}
+                <div key={s.k} className={`relative flex gap-5 py-3 transition-colors duration-300 ${i === step ? "text-carbon" : "text-graphite"}`}>
+                  <motion.div animate={{ backgroundColor: i <= step ? "#b8401a" : "#ebe4d5", borderColor: i <= step ? "#b8401a" : "#d6ccb8", scale: i === step ? 1.08 : 1 }}
                     className="z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border font-mono text-xs font-semibold"
                     style={{ color: i <= step ? "#ffffff" : "#5f574c" }}>{s.k}</motion.div>
                   <div>
                     <div className="flex flex-wrap items-baseline gap-3">
                       <h3 className="font-display text-xl font-semibold">{s.title}</h3>
-                      <code className="rounded bg-paper-2 px-1.5 py-0.5 font-mono text-[11px] text-signal">{s.cmd}</code>
+                      <code className="rounded bg-paper-2 px-1.5 py-0.5 font-mono text-[11px] text-signal-ink">{s.cmd}</code>
                     </div>
                     <AnimatePresence initial={false}>
                       {i === step && (
@@ -48,7 +48,7 @@ export function HowItWorks() {
                       )}
                     </AnimatePresence>
                   </div>
-                </motion.div>
+                </div>
               ))}
             </div>
           </div>

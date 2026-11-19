@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Caveat, Fraunces, Instrument_Sans, JetBrains_Mono } from "next/font/google";
 import { Cursor } from "@/components/fx/Cursor";
+import { MotionPrefs } from "@/components/fx/MotionPrefs";
 import "./globals.css";
 
 const sans = Instrument_Sans({ variable: "--font-instrument", subsets: ["latin"] });
@@ -16,10 +17,14 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${sans.variable} ${display.variable} ${hand.variable} ${jetbrains.variable} h-full antialiased`}>
+    <html lang="en" className={`${sans.variable} ${display.variable} ${hand.variable} ${jetbrains.variable} h-full antialiased`} suppressHydrationWarning>
+      <head>
+        {/* Before first paint: returning visitors never see (or get blocked by) the boot overlay. */}
+        <script dangerouslySetInnerHTML={{ __html: "try{if(sessionStorage.getItem('synapto-boot')==='1')document.documentElement.classList.add('booted')}catch(e){}" }} />
+      </head>
       <body className="grain min-h-full">
         <Cursor />
-        {children}
+        <MotionPrefs>{children}</MotionPrefs>
       </body>
     </html>
   );

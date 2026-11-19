@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion, useInView } from "motion/react";
+import { AnimatePresence, motion, useInView, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Tilt } from "@/components/fx/Interactions";
 
@@ -17,7 +17,7 @@ function Card({ className = "", title, kicker, children, delay = 0 }: { classNam
       className="card-paper group relative h-full overflow-hidden rounded-3xl p-6">
       <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
         style={{ background: `radial-gradient(420px circle at ${pos.x}px ${pos.y}px, rgba(232,85,31,.14), transparent 45%)` }} />
-      <p className="font-mono text-[11px] tracking-[0.25em] text-signal uppercase">{kicker}</p>
+      <p className="font-mono text-[11px] tracking-[0.25em] text-signal-ink uppercase">{kicker}</p>
       <h3 className="mt-2 font-display text-xl font-semibold tracking-tight">{title}</h3>
       <div className="relative mt-5" style={{ transform: "translateZ(30px)" }}>{children}</div>
     </motion.div>
@@ -29,7 +29,7 @@ export function Bento() {
   return (
     <section id="notes" className="relative mx-auto max-w-6xl px-5 py-28">
       <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mb-12 max-w-4xl">
-        <p className="mb-3 font-mono text-xs tracking-[0.3em] text-signal uppercase">Field notes</p>
+        <p className="mb-3 font-mono text-xs tracking-[0.3em] text-signal-ink uppercase">Field notes</p>
         <h2 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">Synapse isn&apos;t a setup step here.<br /><span className="text-graphite">It&apos;s the agent&apos;s nervous system.</span></h2>
       </motion.div>
       <div className="grid gap-4 md:grid-cols-3">
@@ -52,8 +52,9 @@ export function Bento() {
 
 function GraftBeams() {
   const targets = [[520, 40], [560, 95], [540, 150], [470, 175]];
-  const [on, setOn] = useState(0);
-  useEffect(() => { const t = setInterval(() => setOn((v) => (v + 1) % 6), 900); return () => clearInterval(t); }, []);
+  const reduce = useReducedMotion();
+  const [on, setOn] = useState(reduce ? 4 : 0);
+  useEffect(() => { if (reduce) return; const t = setInterval(() => setOn((v) => (v + 1) % 6), 900); return () => clearInterval(t); }, [reduce]);
   return (
     <svg viewBox="0 0 640 200" className="h-44 w-full">
       <defs><filter id="bg"><feGaussianBlur stdDeviation="3" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter></defs>
@@ -79,12 +80,13 @@ function GraftBeams() {
 function Drift() {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: false });
-  const [phase, setPhase] = useState(0);
+  const reduce = useReducedMotion();
+  const [phase, setPhase] = useState(reduce ? 3 : 0);
   useEffect(() => {
-    if (!inView) return;
+    if (!inView || reduce) return;
     const t = setInterval(() => setPhase((p) => (p + 1) % 4), 1300);
     return () => clearInterval(t);
-  }, [inView]);
+  }, [inView, reduce]);
   return (
     <div ref={ref} className="space-y-3">
       <div className="rounded-xl bg-paper-2 p-3 font-mono text-[11.5px]">
@@ -107,8 +109,9 @@ function Drift() {
 }
 
 function Fusion() {
-  const [merged, setMerged] = useState(false);
-  useEffect(() => { const t = setInterval(() => setMerged((m) => !m), 2200); return () => clearInterval(t); }, []);
+  const reduce = useReducedMotion();
+  const [merged, setMerged] = useState(!!reduce);
+  useEffect(() => { if (reduce) return; const t = setInterval(() => setMerged((m) => !m), 2200); return () => clearInterval(t); }, [reduce]);
   const checks = ["replayed call succeeds", "identical call refused", "first Synapse draft rejected"];
   return (
     <div>
@@ -120,7 +123,7 @@ function Fusion() {
         ))}
         <AnimatePresence>{merged && (
           <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} transition={{ type: "spring", stiffness: 300, damping: 16 }}
-            className="absolute rounded-md bg-signal px-3 py-1.5 font-mono text-xs font-semibold text-white shadow-[0_0_30px_rgba(232,85,31,.6)]">process_refund</motion.span>)}
+            className="absolute rounded-md bg-signal-deep px-3 py-1.5 font-mono text-xs font-semibold text-white shadow-[0_0_30px_rgba(232,85,31,.6)]">process_refund</motion.span>)}
         </AnimatePresence>
       </div>
       <ul className="mt-3 space-y-1.5 text-[13px]">
@@ -151,8 +154,9 @@ function Approval() {
 
 function Models() {
   const models = ["groq · gpt-oss-120b", "groq · qwen3.8-27b", "openrouter · nemotron-3-ultra", "groq · gpt-oss-20b"];
+  const reduce = useReducedMotion();
   const [i, setI] = useState(0);
-  useEffect(() => { const t = setInterval(() => setI((v) => (v + 1) % models.length), 1600); return () => clearInterval(t); }, [models.length]);
+  useEffect(() => { if (reduce) return; const t = setInterval(() => setI((v) => (v + 1) % models.length), 1600); return () => clearInterval(t); }, [models.length, reduce]);
   return (
     <div>
       <div className="relative h-10 overflow-hidden">

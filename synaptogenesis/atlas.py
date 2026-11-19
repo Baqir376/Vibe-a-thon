@@ -87,7 +87,7 @@ def _jsdoc_descriptions(repo: Path) -> dict[tuple[str, str], str]:
     out = {}
     for f in list(repo.glob("src/**/*.ts")) + list(repo.glob("*.ts")):
         for m in JSDOC_ROUTE.finditer(f.read_text(encoding="utf-8", errors="ignore")):
-            text = " ".join(l.strip(" *") for l in m.group(1).splitlines()).strip()
+            text = " ".join(ln.strip(" *") for ln in m.group(1).splitlines()).strip()
             out[(m.group(2).upper(), m.group(3))] = text
     return out
 

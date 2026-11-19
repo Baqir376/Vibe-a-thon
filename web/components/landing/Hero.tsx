@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 import { InkField } from "@/components/InkField";
 import { Magnetic } from "@/components/fx/Interactions";
@@ -38,7 +38,7 @@ export function Hero() {
           <motion.div {...rise(B)} className="mb-7 flex items-center gap-3">
             <motion.span initial={{ rotate: -14, scale: 1.6, opacity: 0 }} animate={{ rotate: -4, scale: 1, opacity: 1 }}
               transition={{ delay: B + 0.25, type: "spring", stiffness: 260, damping: 14 }}
-              className="stamp inline-block px-2.5 py-1 text-[11px] text-signal">Track 4 · Open innovation</motion.span>
+              className="stamp inline-block px-2.5 py-1 text-[11px] text-signal-ink">Track 4 · Open innovation</motion.span>
             <span className="font-mono text-xs text-graphite">built on <span className="text-carbon">Synapse CLI</span></span>
           </motion.div>
 
@@ -122,9 +122,11 @@ const SCRIPT: { t: string; c?: string; tools?: number; pause?: number }[] = [
 ];
 
 export function GraftTerminal({ startAfter }: { startAfter: number }) {
-  const [n, setN] = useState(0);
+  const reduce = useReducedMotion();
+  const [n, setN] = useState(reduce ? SCRIPT.length : 0);
   const [tools, setTools] = useState(0);
   useEffect(() => {
+    if (reduce) return; // reduced motion: show the whole transcript, no loop
     let i = 0, alive = true;
     const run = () => {
       if (!alive) return;
@@ -136,10 +138,13 @@ export function GraftTerminal({ startAfter }: { startAfter: number }) {
     };
     const start = setTimeout(run, startAfter * 1000 + 1000);
     return () => { alive = false; clearTimeout(start); };
-  }, [startAfter]);
+  }, [startAfter, reduce]);
 
   return (
     <div className="relative overflow-hidden rounded-2xl bg-ink">
+      <p className="sr-only">Replay of a recorded run: the agent finds orders, tickets and roster endpoints, Synapse grafts 4 tools,
+        6 calls run in parallel, the answer lists customers CUS-101 to CUS-103 and tickets TKT-9001 and TKT-9002, then all tools are pruned.</p>
+      <div aria-hidden className="contents">
       <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
         <span className="font-mono text-[11px] text-muted">synaptogenesis · live graft</span>
         <div className="flex items-center gap-2 font-mono text-[11px]">
@@ -163,6 +168,7 @@ export function GraftTerminal({ startAfter }: { startAfter: number }) {
           ))}
         </AnimatePresence>
         <motion.span className="inline-block h-4 w-2 bg-violet/80 align-middle" animate={{ opacity: [1, 0, 1] }} transition={{ repeat: Infinity, duration: 1 }} />
+      </div>
       </div>
     </div>
   );

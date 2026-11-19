@@ -18,7 +18,7 @@ export function AppPreview() {
   return (
     <section id="preview" className="relative px-5 pt-10 pb-28">
       <div className="mx-auto mb-14 max-w-3xl text-center">
-        <p className="mb-3 font-mono text-xs tracking-[0.3em] text-signal uppercase">Plate II · the app</p>
+        <p className="mb-3 font-mono text-xs tracking-[0.3em] text-signal-ink uppercase">Plate II · the app</p>
         <h2 className="font-display text-4xl font-semibold tracking-tight text-carbon sm:text-6xl">One question. <i className="text-signal">Four systems.</i><br />Zero pre-wired tools.</h2>
       </div>
       <div ref={ref} style={{ perspective: 1400 }} className="mx-auto max-w-5xl">

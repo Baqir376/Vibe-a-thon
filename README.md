@@ -15,6 +15,15 @@ Synaptogenesis starts the agent with **zero business tools**. For each question 
 
 > Every other team used Synapse to build an agent. We built an agent that uses Synapse.
 
+## Docs
+
+- [`docs/WRITEUP.md`](docs/WRITEUP.md): the problem, why Synapse fits, demo script
+- [`docs/MCP_SETUP.md`](docs/MCP_SETUP.md): every MCP server Synapse generates and how to attach them
+- [`docs/ALIGNMENT.md`](docs/ALIGNMENT.md): requirement-by-requirement check against the problem statement
+- [`docs/TESTING.md`](docs/TESTING.md): 43 Python + 27 web tests, security, accessibility, performance
+- [`docs/benchmark.md`](docs/benchmark.md): pre-loaded tools vs. just-in-time, measured
+- [`docs/synapse-issues.md`](docs/synapse-issues.md): 12 Synapse CLI issues with repros
+
 ## Demo company: Meridian Medical Supply (4 legacy systems, 39 endpoints)
 
 | System | Stack | Port | Synapse mode |

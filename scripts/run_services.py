@@ -27,7 +27,7 @@ SERVICES = [  # name, port, health probe
 
 def up(port: int, probe: str) -> bool:
     try:
-        with urllib.request.urlopen(f"http://127.0.0.1:{port}{probe}", timeout=1) as r:
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}{probe}", timeout=1) as r:  # nosec B310 - fixed local http URL
             return r.status == 200
     except Exception:
         return False

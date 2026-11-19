@@ -168,6 +168,6 @@ def create_purchase_order(body: PurchaseOrderIn):
         if line.sku not in PRODUCTS:
             raise HTTPException(404, f"Unknown SKU {line.sku}")
     po = {"po_id": f"PO-{len(PURCHASE_ORDERS) + 7001}", "status": "draft", **body.model_dump(),
-          "total_inr": sum(PRODUCTS[l.sku]["unit_price_inr"] * l.qty for l in body.lines)}
+          "total_inr": sum(PRODUCTS[ln.sku]["unit_price_inr"] * ln.qty for ln in body.lines)}
     PURCHASE_ORDERS.append(po)
     return po

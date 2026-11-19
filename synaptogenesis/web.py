@@ -100,8 +100,10 @@ def build_app(prewarm: bool = False) -> FastAPI:
 
     app = FastAPI(title="Synaptogenesis", lifespan=lifespan)
     from fastapi.middleware.cors import CORSMiddleware
-    app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
-                       allow_methods=["*"], allow_headers=["*"])  # the Next.js frontend in web/
+    import os
+    origins = os.environ.get("SYNAPTO_CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3100").split(",")
+    app.add_middleware(CORSMiddleware, allow_origins=[o.strip() for o in origins if o.strip()],
+                       allow_methods=["*"], allow_headers=["*"])  # the Next.js frontend in web/ (dev :3000, e2e :3100)
 
     @app.get("/")
     async def index():

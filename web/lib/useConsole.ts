@@ -44,7 +44,7 @@ type Action =
   | { type: "reset"; s: AgentState; status?: string };
 
 let uid = 1;
-const initial: ConsoleState = {
+export const initial: ConsoleState = {
   systems: [], caps: [], live: [], dormant: [], fresh: [], building: [], phase: "offline",
   status: "Connecting to the agent…", lines: [], pulses: [], toasts: [], approvals: [], question: "", answer: "",
   meta: "", busy: false, stats: { builds: 0, grafts: 0, calls: 0, peak: 0 }, models: [],
@@ -59,7 +59,7 @@ function toast(s: ConsoleState, tone: Tone, title: string, body: string): Toast[
 const without = (arr: string[], drop: string[]) => arr.filter((x) => !drop.includes(x));
 const uniq = (arr: string[]) => Array.from(new Set(arr));
 
-function reduce(s: ConsoleState, a: Action): ConsoleState {
+export function reduce(s: ConsoleState, a: Action): ConsoleState {
   if (a.type === "offline") return { ...s, phase: "offline", status: "Agent server offline: run  python -m synaptogenesis web" };
   if (a.type === "dismissToast") return { ...s, toasts: s.toasts.filter((t) => t.id !== a.id) };
   if (a.type === "dropPulse") return { ...s, pulses: s.pulses.filter((p) => p.id !== a.id) };
@@ -155,6 +155,7 @@ export function useConsole() {
   const [mode, setMode] = useState<Mode>("checking");
   const [serverUp, setServerUp] = useState(false);
   const [replaying, setReplaying] = useState<string | null>(null);
+  const playingRef = useRef(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const refresh = useCallback(async () => {
@@ -176,13 +177,14 @@ export function useConsole() {
     if (e.kind === "drift" || e.kind === "fusion.wired") refresh();
   }, mode === "live");
 
-  const stopReplay = useCallback(() => { timers.current.forEach(clearTimeout); timers.current = []; setReplaying(null); }, []);
+  const stopReplay = useCallback(() => { timers.current.forEach(clearTimeout); timers.current = []; playingRef.current = false; setReplaying(null); }, []);
 
   /** Play a recorded run with its real rhythm; long model waits are compressed, approvals held long enough to read. */
   const playReplay = useCallback(async (id: string) => {
     stopReplay();
     const rp = await loadReplay(id);
     if (!rp) return false;
+    playingRef.current = true;
     setReplaying(id);
     dispatch({ type: "reset", s: rp.state });
     let at = 400, prev = rp.events[0]?.t ?? 0, prevKind = "";
@@ -192,7 +194,7 @@ export function useConsole() {
       prev = e.t; prevKind = e.kind;
       timers.current.push(setTimeout(() => dispatch({ type: "event", e }), at));
     }
-    timers.current.push(setTimeout(() => setReplaying(null), at + 200));
+    timers.current.push(setTimeout(() => { playingRef.current = false; setReplaying(null); }, at + 200));
     return true;
   }, [stopReplay]);
 
@@ -201,7 +203,8 @@ export function useConsole() {
   /** Replay mode with no server: show the recorded company (systems + endpoints) ready to play. */
   const primeReplay = useCallback(async () => {
     const rp = await loadReplay("delayed");
-    if (rp) dispatch({ type: "reset", s: rp.state, status: "Replay mode · pick a scenario" });
+    // never overwrite a replay that started while this was loading
+    if (rp && !playingRef.current) dispatch({ type: "reset", s: rp.state, status: "Replay mode · pick a scenario" });
   }, []);
 
   return {

@@ -52,7 +52,7 @@ def _global_runner() -> list[str] | None:
         _RUNNER = []
         try:
             import subprocess
-            root = subprocess.run(["npm", "root", "-g"], capture_output=True, text=True, shell=os.name == "nt").stdout.strip()
+            root = subprocess.run([shutil.which("npm") or "npm", "root", "-g"], capture_output=True, text=True).stdout.strip()  # nosec B603 - constant args, no shell
             pkg = Path(root) / "@2ndbrainlabs-ai" / "synapse-mcp"
             bin_field = json.loads((pkg / "package.json").read_text(encoding="utf-8"))["bin"]
             entry = pkg / (bin_field if isinstance(bin_field, str) else next(iter(bin_field.values())))

@@ -134,7 +134,7 @@ def create_refund(body: RefundIn):
     try:
         return refunds.issue_refund(body.ticket_id, body.order_id, decision["approved_amount_inr"], body.reason)
     except ValueError as e:
-        raise HTTPException(409, str(e))
+        raise HTTPException(409, str(e)) from e
 
 
 @app.get("/refunds")

@@ -16,7 +16,7 @@ export function Nav() {
       <div className={`flex w-full max-w-5xl items-center justify-between rounded-full px-4 py-2 transition-all duration-500 ${scrolled ? "border-[1.5px] border-carbon bg-paper/90 shadow-[3px_3px_0_#16130f] backdrop-blur" : "border-[1.5px] border-transparent"}`}>
         <Link href="/" className="flex items-center gap-2 text-carbon" data-cursor="Home">
           <InkMark size={26} />
-          <span className="font-display text-[19px] font-semibold tracking-tight">Synapto<i className="text-signal">genesis</i></span>
+          <span className="font-display text-[19px] font-semibold tracking-tight">Synapto<i className="text-signal-ink">genesis</i></span>
         </Link>
         <div className="hidden items-center gap-7 text-sm text-graphite md:flex">
           {[["#preview", "The app"], ["#how", "How it works"], ["#notes", "Field notes"], ["#proof", "Proof"]].map(([h, l]) => (

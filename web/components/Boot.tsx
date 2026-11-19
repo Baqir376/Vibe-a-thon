@@ -33,7 +33,7 @@ export function Boot() {
   return (
     <AnimatePresence>
       {show && (
-        <motion.div key="boot" className="paper-page fixed inset-0 z-[100] flex flex-col items-center justify-center"
+        <motion.div key="boot" className="boot-overlay paper-page fixed inset-0 z-[100] flex flex-col items-center justify-center"
           exit={{ clipPath: "inset(0 0 100% 0)", transition: { duration: 0.8, ease: [0.76, 0, 0.24, 1] } }}
           onClick={() => setSkip(true)} style={{ clipPath: "inset(0 0 0% 0)" }}>
           <svg width="320" height="300" viewBox="-160 -130 320 300" className="max-w-[80vw]">

@@ -15,7 +15,7 @@ import anthropic
 
 from .atlas import Atlas
 from .events import emit
-from .graft import GraftError, GraftManager
+from .graft import GraftManager
 
 EFFORT = os.environ.get("SYNAPTO_EFFORT", "medium")
 MAX_TURNS = int(os.environ.get("SYNAPTO_MAX_TURNS", "14"))
@@ -289,7 +289,7 @@ class Agent:
                     return f"Invalid JSON arguments ({e}). Call the tool again with a valid JSON object.", True
                 return await self._run_tool(c.function.name, args, stats)
             results = await asyncio.gather(*(run_call(c) for c in calls))  # independent calls run concurrently
-            for c, (out, is_err) in zip(calls, results):
+            for c, (out, is_err) in zip(calls, results, strict=True):
                 messages.append({"role": "tool", "tool_call_id": c.id,
                                  "content": ("ERROR: " if is_err else "") + out})
         stats.answer = stats.answer or "(stopped: turn limit reached)"
@@ -367,7 +367,7 @@ class Agent:
                                           for b in blocks))
             messages.append({"role": "user", "content": [
                 {"type": "tool_result", "tool_use_id": b.id, "content": out, "is_error": is_err}
-                for b, (out, is_err) in zip(blocks, outs)]})
+                for b, (out, is_err) in zip(blocks, outs, strict=True)]})
 
         stats.answer = "\n".join(b.text for b in messages[-1]["content"] if getattr(b, "type", "") == "text") \
             if messages[-1]["role"] == "assistant" else ""

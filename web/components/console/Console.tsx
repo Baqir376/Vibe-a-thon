@@ -105,7 +105,7 @@ export function Console() {
           <div className="grid gap-2">
             {scenarios.map((sc) => (
               <Tilt key={sc.id} max={5}>
-                <motion.button whileTap={{ scale: 0.98 }} onClick={() => run(sc)} disabled={busy} data-cursor={mode === "replay" ? "Replay" : "Run"}
+                <motion.button whileTap={{ scale: 0.98 }} onClick={() => run(sc)} disabled={busy || mode === "checking"} data-cursor={mode === "replay" ? "Replay" : "Run"}
                   className={`glass group flex w-full items-start gap-3 rounded-2xl p-3 text-left transition disabled:opacity-50 ${c.replaying === sc.id ? "border-violet/70" : "hover:border-violet/50"}`}>
                   <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-violet/15 text-violet">{ICON[sc.id] ?? "›"}</span>
                   <span className="min-w-0">

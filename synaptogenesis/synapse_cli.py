@@ -38,7 +38,7 @@ class SynapseRun:
 def _resolve_cli() -> list[str]:
     """Run the CLI's JS entry with node directly (avoids cmd.exe mangling commas/braces on Windows)."""
     try:
-        root = subprocess.run(["npm", "root", "-g"], capture_output=True, text=True, shell=os.name == "nt").stdout.strip()
+        root = subprocess.run([shutil.which("npm") or "npm", "root", "-g"], capture_output=True, text=True).stdout.strip()  # nosec B603 - constant args, no shell
         pkg = Path(root) / "@2ndbrainlabs-ai" / "synapse-cli"
         bin_field = json.loads((pkg / "package.json").read_text(encoding="utf-8"))["bin"]
         entry = bin_field if isinstance(bin_field, str) else bin_field["synapse"]
@@ -138,6 +138,6 @@ def parse_endpoint_table(stdout: str) -> list[tuple[str, str, str]]:
 
 
 def short_error(stdout: str) -> str:
-    lines = [l.strip(" │╭╮╰╯─\t") for l in stdout.splitlines()]
-    lines = [l for l in lines if l and ("✖" in l or "error" in l.lower() or "required" in l.lower())]
+    lines = [ln.strip(" │╭╮╰╯─\t") for ln in stdout.splitlines()]
+    lines = [ln for ln in lines if ln and ("✖" in ln or "error" in ln.lower() or "required" in ln.lower())]
     return " | ".join(lines[:4]) or stdout.strip()[-400:]

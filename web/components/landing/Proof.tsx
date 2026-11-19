@@ -34,7 +34,7 @@ export function Proof() {
   return (
     <section id="proof" className="relative mx-auto max-w-6xl px-5 py-28">
       <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mb-12 max-w-4xl">
-        <p className="mb-3 font-mono text-xs tracking-[0.3em] text-signal uppercase">Proof, measured</p>
+        <p className="mb-3 font-mono text-xs tracking-[0.3em] text-signal-ink uppercase">Proof, measured</p>
         <h2 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">Numbers from real runs,<br /><span className="text-graphite">including the unflattering ones.</span></h2>
       </motion.div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -79,7 +79,7 @@ export function Proof() {
           6 questions, free Groq models. At 38 endpoints both setups answer correctly (one JIT miss), and the extra
           discovery turns cancel the smaller prompts, so total tokens are even. The case for just-in-time is
           least privilege, live updates and verified fusion today, and scale tomorrow: hundreds of endpoints do not
-          fit in a free-tier request at all. Full table in <code className="font-mono text-signal">docs/benchmark.md</code>.
+          fit in a free-tier request at all. Full table in <code className="font-mono text-signal-ink">docs/benchmark.md</code>.
         </p>
       </div>
     </section>
@@ -89,13 +89,13 @@ export function Proof() {
 export function FinalCTA() {
   return (
     <section className="relative overflow-hidden px-5 pt-16 pb-28">
-      <div className="pointer-events-none absolute left-1/2 top-1/2 h-[420px] w-[760px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-signal-deep/25 blur-[130px]" />
+      <div className="pointer-events-none absolute left-1/2 top-1/2 h-[420px] w-[760px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-signal/10 blur-[130px]" />
       <motion.div initial={{ opacity: 0, scale: 0.96 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.8 }}
         className="relative mx-auto max-w-3xl text-center">
         <h2 className="font-display text-5xl font-extrabold tracking-tight sm:text-6xl">Watch it <span className="text-gradient">grow.</span></h2>
-        <p className="mx-auto mt-5 max-w-xl text-lg text-graphite">Ask a question that spans four legacy systems. Watch Synapse build the connections, the agent use them, and the access disappear.</p>
+        <p className="mx-auto mt-5 max-w-xl text-lg text-carbon/85">Ask a question that spans four legacy systems. Watch Synapse build the connections, the agent use them, and the access disappear.</p>
         <div className="mt-9"><Magnetic>
-          <Link href="/app" data-cursor="Launch" className="inline-flex items-center gap-2 rounded-full bg-white px-9 py-4 text-lg font-semibold text-black transition-shadow hover:shadow-[0_0_60px_rgba(196,181,253,.6)]">
+          <Link href="/app" data-cursor="Launch" className="inline-flex items-center gap-2 rounded-full bg-carbon px-9 py-4 text-lg font-semibold text-paper shadow-[4px_4px_0_#e8551f]">
             Launch the app →
           </Link>
         </Magnetic></div>

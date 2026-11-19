@@ -108,7 +108,7 @@ async def cmd_selftest() -> None:
     try:
         for system, eps, tool, args in plan:
             try:
-                res = await gm.graft(system, eps, "selftest")
+                await gm.graft(system, eps, "selftest")
             except GraftError as e:
                 say("red", f"  {system}: {e}")
                 continue
@@ -194,22 +194,30 @@ async def cmd_chat(prewarm: bool = False) -> None:
 def main() -> None:
     p = argparse.ArgumentParser(prog="synaptogenesis")
     sub = p.add_subparsers(dest="cmd", required=True)
-    a = sub.add_parser("atlas"); a.add_argument("--rebuild", action="store_true")
-    s = sub.add_parser("search"); s.add_argument("query")
+    a = sub.add_parser("atlas")
+    a.add_argument("--rebuild", action="store_true")
+    s = sub.add_parser("search")
+    s.add_argument("query")
     sub.add_parser("selftest")
     wb = sub.add_parser("web", help="neural-map dashboard (agent + Sentinel + approvals) at http://127.0.0.1:8700")
-    wb.add_argument("--port", type=int, default=8700); wb.add_argument("--prewarm", action="store_true")
+    wb.add_argument("--port", type=int, default=8700)
+    wb.add_argument("--prewarm", action="store_true")
     bn = sub.add_parser("bench", help="benchmark: every tool pre-loaded vs just-in-time grafting")
-    bn.add_argument("--tasks", type=int, default=6); bn.add_argument("--modes", default="static,jit")
+    bn.add_argument("--tasks", type=int, default=6)
+    bn.add_argument("--modes", default="static,jit")
     fz = sub.add_parser("fuse", help="manually fuse a chain of tools via Synapse Custom mode (normally automatic)")
-    fz.add_argument("system"); fz.add_argument("chain", help="comma-separated tool names, e.g. get_ticket,create_refund")
+    fz.add_argument("system")
+    fz.add_argument("chain", help="comma-separated tool names, e.g. get_ticket,create_refund")
     fz.add_argument("--args", default="{}", help="JSON inputs to replay during verification")
     sub.add_parser("sentinel", help="watch the systems' code and keep the atlas in sync via synapse --discover")
     w = sub.add_parser("warm", help="pre-build hosted Synapse servers (read-only endpoints) before a demo")
     w.add_argument("--reset", action="store_true", help="drop endpoints added by earlier grafts")
-    q = sub.add_parser("ask"); q.add_argument("question"); q.add_argument("--keep", action="store_true")
+    q = sub.add_parser("ask")
+    q.add_argument("question")
+    q.add_argument("--keep", action="store_true")
     q.add_argument("--prewarm", action="store_true", help="pre-connect dormant Synapse servers first")
-    c = sub.add_parser("chat"); c.add_argument("--prewarm", action="store_true")
+    c = sub.add_parser("chat")
+    c.add_argument("--prewarm", action="store_true")
     args = p.parse_args()
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")

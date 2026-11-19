@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  python:
+    name: Python · lint, security, unit, API, contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: actions/setup-node@v4
+        with: { node-version: "24" }
+      - name: Install Synapse CLI (contract tests run the real generator, local mode, no key)
+        run: npm install -g @2ndbrainlabs-ai/synapse-cli@0.1.9
+      - name: Install Python deps
+        run: pip install -r requirements.txt pytest pytest-cov ruff bandit pip-audit
+      - name: Lint (ruff)
+        run: ruff check synaptogenesis services scripts tests --select E,F,W,B --ignore E501
+      - name: Static security analysis (bandit, fail on medium+)
+        run: bandit -q -r synaptogenesis services scripts -ll
+      - name: Dependency vulnerabilities (pip-audit)
+        run: pip-audit -r requirements.txt
+      - name: Unit + service API + agent API + contract tests
+        env: { GROQ_API_KEY: "ci-dummy", SYNAPSE_TELEMETRY: "0" }
+        run: pytest -m "not integration and not perf" --cov=synaptogenesis --cov-report=term-missing
+
+  web:
+    name: Web · types, lint, unit, e2e, accessibility
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: web } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "24", cache: npm, cache-dependency-path: web/package-lock.json }
+      - run: npm ci
+      - name: Type check
+        run: npx tsc --noEmit
+      - name: Lint
+        run: npx eslint .
+      - name: Unit tests (vitest)
+        run: npx vitest run
+      - name: Dependency vulnerabilities
+        run: npm audit --omit=dev --audit-level=high
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - name: E2E + accessibility (production build, agent server offline → Replay mode)
+        env: { CI: "1" }
+        run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with: { name: playwright-report, path: web/playwright-report }
