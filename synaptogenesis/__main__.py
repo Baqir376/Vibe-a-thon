@@ -199,6 +199,8 @@ def main() -> None:
     sub.add_parser("selftest")
     wb = sub.add_parser("web", help="neural-map dashboard (agent + Sentinel + approvals) at http://127.0.0.1:8700")
     wb.add_argument("--port", type=int, default=8700); wb.add_argument("--prewarm", action="store_true")
+    bn = sub.add_parser("bench", help="benchmark: every tool pre-loaded vs just-in-time grafting")
+    bn.add_argument("--tasks", type=int, default=6); bn.add_argument("--modes", default="static,jit")
     fz = sub.add_parser("fuse", help="manually fuse a chain of tools via Synapse Custom mode (normally automatic)")
     fz.add_argument("system"); fz.add_argument("chain", help="comma-separated tool names, e.g. get_ticket,create_refund")
     fz.add_argument("--args", default="{}", help="JSON inputs to replay during verification")
@@ -222,6 +224,9 @@ def main() -> None:
         from .web import build_app
         say("bold", f"Synaptogenesis dashboard → http://127.0.0.1:{args.port}")
         uvicorn.run(build_app(prewarm=args.prewarm), host="127.0.0.1", port=args.port, log_level="warning")
+    elif args.cmd == "bench":
+        from .benchmark import main as bench_main
+        asyncio.run(bench_main(args.tasks, [m.strip() for m in args.modes.split(",")]))
     elif args.cmd == "fuse":
         async def run_fuse():
             from .fusion import Fusion

@@ -75,6 +75,24 @@ Other entry points: `python -m synaptogenesis chat [--prewarm]` (terminal, Senti
 - Gold node: an endpoint the **Drift Sentinel** discovered via `synapse build --discover`.
 - Approval cards: every data-changing graft and call needs a human click.
 
+## Tool fusion: "neurons that fire together wire together"
+
+Agents work better with one high-level tool than with a chain of small ones (Track 2's thesis).
+Synaptogenesis finds those chains in the agent's own usage instead of having a human design them:
+
+1. **Learn.** After every question the agent's calls are grouped per system. A chain with a data-changing step
+   (e.g. `tickets: get_ticket > create_refund`) that recurs twice is a fusion candidate.
+2. **Fuse.** `synapse build --custom --local -q "<what those steps did>"` composes ONE tool from the service's
+   internal Python functions (`refunds.check_refund_policy`, `already_refunded`, `issue_refund`).
+3. **Verify before trust.** The composed tool runs in a sandbox copy of the service's source (no shared data):
+   the agent's own call is replayed and must succeed, and the identical second call must be refused
+   (no double side effects). This gate rejected Synapse's first refund tool, which issued the refund and
+   then reported "Failed to issue refund".
+4. **Wire.** Only a verified tool joins the atlas, as a new system `tickets_fused`. The write step it replaces is
+   superseded in search. Calling it still needs human approval.
+
+Manual trigger: `python -m synaptogenesis fuse tickets get_ticket,create_refund --args '{...replay inputs...}'`.
+
 ## Safety
 
 - `policy.yaml` `deny`: endpoints that can never be grafted (for example, rerouting a cold-chain shipment).
@@ -114,12 +132,20 @@ systems.yaml       registry of systems; policy.yaml: least-privilege rules
 7. **Hosted mode on Express (TypeScript) is unusable in practice:** routes stay in `:param` form, but runner 0.0.4 only fills in `{param}` placeholders, so tools get an empty input schema and call literal URLs like `/oncall/:region`. POST body fields from `req.body` are not detected either, so the body arrives empty. `--smart-names` doesn't help. FastAPI works correctly in hosted mode. That's why the Orders and Roster services were rewritten from Express to FastAPI.
 8. The hosted MCP snippet prints `"SYNAPSE_API_KEY": "<your key>"`. Anything that copies the snippet as-is gets `401 Invalid or expired API key`.
 9. Hosted Auto marks optional body fields as required (e.g. `order_id: Optional[str] = None` on `POST /tickets`).
+10. **Request-body fields are silently dropped** from generated tools when the field is typed `Literal[...]` **or has a
+    trailing `# comment`** (`class M(BaseModel): a: str  # note` makes `a` disappear). `POST /refunds` lost its required
+    `reason`, so no agent could ever succeed with it. Minimal repro in the issue text; workaround: plain `str` with
+    validation in the handler, comments on their own line.
+11. Custom mode scans its **own earlier outputs** (`*_server.py` in the repo) as project source and composes new tools
+    on top of them, so deleting a generated file breaks the newer one. We park stray outputs before every fusion build.
+12. Custom-mode code generation is only as good as the docstrings: with undocumented return shapes it invented keys
+    (`refund_amount`, `success`) that the functions never return. Documenting the returned dict fixed it.
 
 ## Roadmap
 
 - [x] Day 1: 4 services, Atlas, graft/prune engine, policy + approvals, agent loop
 - [x] Hosted grafts (Orders, Roster) + local grafts (Inventory, Tickets)
 - [x] Drift Sentinel: watch repos → `synapse build --discover` → surface diff → smoke test → agent uses it
-- [ ] Tool fusion: repeated call chains → `synapse build --custom -q` into one composed tool
+- [x] Tool fusion: Hebbian detection → `synapse build --custom` → sandbox verification → wired + supersedes the old write step
 - [ ] Benchmark: all 39 tools pre-wired vs just-in-time grafting (accuracy, tokens, latency)
 - [x] Neural-map dashboard (FastAPI + SSE + SVG), approvals in the UI

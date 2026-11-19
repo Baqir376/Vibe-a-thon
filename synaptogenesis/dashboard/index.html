@@ -98,6 +98,7 @@
     <span><i style="background:var(--live);box-shadow:0 0 8px var(--live)"></i>grafted (live)</span>
     <span><i style="border:1.5px solid var(--dormant)"></i>dormant</span>
     <span><i style="background:var(--drift)"></i>new (Sentinel)</span>
+    <span><i style="background:var(--core)"></i>fused (Synapse Custom)</span>
   </div>
 </div>
 
@@ -132,7 +133,7 @@
 <script>
 const NS = "http://www.w3.org/2000/svg";
 const C = { x: 600, y: 410 };
-const SYS_POS = { orders: -148, inventory: -36, tickets: 36, roster: 148 };  // degrees around the core
+const SYS_POS = { orders: -148, inventory: -36, tickets: 36, roster: 148, tickets_fused: 90 };  // degrees around the core
 const RX_SYS = 330, RY_SYS = 235, R_EP = 118;  // systems sit on an ellipse
 const $ = (id) => document.getElementById(id);
 const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
@@ -163,7 +164,9 @@ function layout() {
     el("line", { x1: C.x, y1: C.y, x2: p.x, y2: p.y, stroke: "#1a2742", "stroke-width": 1.2, "stroke-dasharray": "2 6" }, $("dendrites"));
     el("circle", { cx: p.x, cy: p.y, r: 36, fill: "url(#sysGrad)", stroke: "#2b3d63", "stroke-width": 1.5, id: "sys-" + s.name }, g);
     el("text", { x: p.x, y: p.y + 1, class: "node-label" }, g).textContent = s.name;
-    el("text", { x: p.x, y: p.y + 15, class: "node-sub" }, g).textContent = s.mode === "hosted" ? "synapse hosted" : "synapse local";
+    el("text", { x: p.x, y: p.y + 15, class: "node-sub" }, g).textContent =
+      s.mode === "hosted" ? "synapse hosted" : s.mode === "fused" ? "synapse custom" : "synapse local";
+    if (s.mode === "fused") $("sys-" + s.name).setAttribute("stroke", "var(--core)");
     const caps = S.caps.filter(c => c.system === s.name);
     const n = caps.length, spread = Math.min(236, 22 * n);
     caps.forEach((c, j) => placeEndpoint(c, s.name, angles[s.name], n > 1 ? -spread / 2 + spread * j / (n - 1) : 0));
@@ -176,7 +179,9 @@ function placeEndpoint(c, sys, sysAngle, offset) {
   const p = polar(sp.x, sp.y, R_EP, sysAngle + offset);
   el("line", { x1: sp.x, y1: sp.y, x2: p.x, y2: p.y, stroke: "#1c2a47", "stroke-width": 1 }, $("dendrites"));
   const g = el("g", { style: "cursor:default" }, $("endpoints"));
-  const dot = el("circle", { cx: p.x, cy: p.y, r: 5.5, fill: c.mutating ? "var(--write)" : "var(--read)", opacity: .35 }, g);
+  const fused = sys.endsWith("_fused");
+  const dot = el("circle", { cx: p.x, cy: p.y, r: fused ? 7 : 5.5, fill: fused ? "var(--core)" : c.mutating ? "var(--write)" : "var(--read)",
+                             opacity: fused ? .9 : .35 }, g);
   const outward = Math.cos((sysAngle + offset) * Math.PI / 180) >= 0;
   const lbl = el("text", { x: p.x + (outward ? 10 : -10), y: p.y + 3, class: "ep-label", "text-anchor": outward ? "start" : "end" }, g);
   lbl.textContent = c.spec.replace(/\{[^}]+\}/g, "{…}");
@@ -270,7 +275,7 @@ function setBusy(b) { $("go").disabled = b; $("status").textContent = b ? "agent
   $("coreHalo") && $("coreHalo").setAttribute("class", b ? "core-busy" : "core-glow"); }
 
 // ------------------------------------------------------------------ events
-function onEvent(ev) {
+async function onEvent(ev) {
   const k = ev.kind;
   if (k === "ask") { log(`? ${ev.question}`, "b"); }
   else if (k === "atlas.search") { log(`  find_capability "${ev.query}" → ${ev.hits} hits`); }
@@ -306,6 +311,18 @@ function onEvent(ev) {
   else if (k === "drift") { onDrift(ev); }
   else if (k === "prewarm") { log(`  prewarmed ${ev.system}: ${ev.endpoints} endpoints dormant (${ev.ms}ms)`, "g");
     S.caps.filter(c => c.system === ev.system && !c.mutating).forEach(c => { const e = S.ep[key(c.system, c.spec)]; if (e && !S.live.has(key(c.system, c.spec))) { e.dot.setAttribute("fill", "none"); e.dot.setAttribute("stroke", "var(--dormant)"); e.dot.setAttribute("stroke-width", 1.6); e.dot.setAttribute("opacity", .9); } }); }
+  else if (k === "fusion.observed") { log(`⧉ learning: ${ev.system} ${ev.chain.join(" › ")} seen ${ev.count}/${ev.threshold}`, "b"); }
+  else if (k === "fusion.start") { log(`⧉ synapse build --custom: fusing ${ev.chain.join(" › ")}`, "b"); ring(ev.system, "var(--core)");
+    const p = S.sysPos[ev.system]; p && floater(p.x, p.y - 48, "synapse --custom: fusing…", "#c4b5fd"); }
+  else if (k === "fusion.built") { log(`  Synapse composed ${ev.tool} in ${ev.build_ms}ms → sandbox verification`, "b"); }
+  else if (k === "fusion.verified") { ev.report.checks.forEach(c => log(`  ${c.ok ? "✓" : "✖"} ${c.check}`, c.ok ? "g" : "r")); }
+  else if (k === "fusion.failed") { log(`⧉ fusion rejected at ${ev.stage}: ${JSON.stringify(ev.report || ev.error).slice(0, 160)}`, "r"); }
+  else if (k === "fusion.wired") {
+    await refreshState();
+    const e = S.ep[key(ev.system, "POST /fused/" + ev.tool)];
+    if (e) { ring(ev.system, "var(--core)"); floater(e.p.x, e.p.y - 16, "new verified tool: " + ev.tool, "#c4b5fd"); }
+    log(`⧉ new neuron ${ev.system}.${ev.tool} replaces ${ev.chain.join(" › ")}`, "g");
+  }
   else if (k === "llm.rate_limited") { log(`  model ${ev.model} rate-limited → rotating`, ""); }
   else if (k === "step" && ev.step === "text") { /* final text arrives with answer.text */ }
   else if (k === "answer.text") {
@@ -316,13 +333,17 @@ function onEvent(ev) {
   else if (k === "answer.error") { setBusy(false); $("answer").innerHTML = `<div style="color:var(--danger)">${esc(ev.error)}</div>`; log("✖ " + ev.error, "r"); }
 }
 
-async function onDrift(ev) {
-  if (!ev.added.length && !ev.removed.length) { log(`  Sentinel: ${ev.system} surface unchanged`, "d"); return; }
+async function refreshState() {
   const st = await (await fetch("/api/state")).json();
   const prevLive = new Set(S.live), prevDormant = new Set(S.dormant);
-  S.caps = st.capabilities; S.live = new Set(); S.dormant = new Set(); layout();
+  S.systems = st.systems; S.caps = st.capabilities; S.live = new Set(); S.dormant = new Set(); layout();
   prevDormant.forEach(k => { const [s, sp] = k.split("|"); if (S.ep[k]) { setLive(s, sp, true); setLive(s, sp, false); } });
   prevLive.forEach(k => { const [s, sp] = k.split("|"); if (S.ep[k]) setLive(s, sp, true); });
+}
+
+async function onDrift(ev) {
+  if (!ev.added.length && !ev.removed.length) { log(`  Sentinel: ${ev.system} surface unchanged`, "d"); return; }
+  await refreshState();
   ev.added.forEach(sp => { const e = S.ep[key(ev.system, sp)]; if (!e) return;
     e.dot.setAttribute("fill", "var(--drift)"); e.dot.setAttribute("opacity", 1); e.dot.setAttribute("r", 8); e.dot.setAttribute("filter", "url(#glow)");
     e.lbl.classList.add("on"); e.lbl.setAttribute("fill", "var(--drift)");

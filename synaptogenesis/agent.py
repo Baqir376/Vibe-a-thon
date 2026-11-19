@@ -94,6 +94,12 @@ Rules:
 - Questions often span systems (orders + tickets + roster + inventory). Join facts by shared ids: customers CUS-*, orders ORD-*, shipments SHP-*, staff EMP-*, warehouses WH-*. Pune is in the "west" region.
 - Final answer: decision-ready and SHORT (under 180 words; compact bullets, no long tables). After each fact, cite its source as [system.tool]. End with a one-line "Next step"."""
 
+STATIC_PROMPT = """You are the operations copilot for Meridian Medical Supply, a distributor of insulin and diabetes supplies.
+You have tools for every internal system (orders, inventory, tickets, roster), named <system>__<tool>.
+Call independent tools in parallel. Never guess data; every fact must come from a tool result.
+Join facts by shared ids: customers CUS-*, orders ORD-*, shipments SHP-*, staff EMP-*, warehouses WH-*. Pune is in the "west" region.
+Final answer: decision-ready and SHORT (under 180 words). After each fact, cite its source as [system.tool]."""
+
 META_TOOLS = [
     {"name": "find_capability",
      "description": "Search every internal system's endpoints by intent. Pass all your needs at once, e.g. ['delayed shipments', 'tickets for a customer', 'who is on call']. Returns, per query, the system, exact endpoint, tool name, params and whether it changes data.",
@@ -128,11 +134,15 @@ class RunStats:
     seconds: float = 0.0
     answer: str = ""
     stop_reason: str = ""
+    tool_schema_chars: int = 0
+    failed_calls: int = 0
     trace: list[dict] = field(default_factory=list)
 
 
 class Agent:
-    def __init__(self, grafts: GraftManager, atlas: Atlas, on_step=None, auto_prune: bool = True, fusion=None):
+    def __init__(self, grafts: GraftManager, atlas: Atlas, on_step=None, auto_prune: bool = True, fusion=None,
+                 static: bool = False):
+        self.static = static  # benchmark baseline: every tool pre-loaded, no atlas/graft meta-tools
         self.grafts = grafts
         self.fusion = fusion
         self.fusion_tasks: list[asyncio.Task] = []
@@ -164,6 +174,7 @@ class Agent:
             out = out[:TOOL_RESULT_LIMIT] + "\n…(truncated)"
         self.on_step("tool_result", {"name": name, "is_error": is_err, "output": out})
         stats.trace.append({"tool": name, "input": args, "is_error": is_err})
+        stats.failed_calls += int(is_err)
         return out, is_err
 
     async def _chat_with_rotation(self, **kwargs):
@@ -217,13 +228,14 @@ class Agent:
     async def _loop_openai(self, question: str, history: list, stats: RunStats) -> None:
         """Chat-completions tool loop for OpenAI-compatible providers (Groq, Gemini, OpenRouter)."""
         from openai import BadRequestError
-        messages = [{"role": "system", "content": SYSTEM_PROMPT}] + list(history) + [{"role": "user", "content": question}]
+        messages = [{"role": "system", "content": STATIC_PROMPT if self.static else SYSTEM_PROMPT}] + list(history) +                    [{"role": "user", "content": question}]
         rejected = 0
         while stats.turns < MAX_TURNS:
             stats.turns += 1
             tools = [{"type": "function", "function": {"name": t["name"], "description": t["description"][:1000],
                                                        "parameters": _clean_schema(t["input_schema"])}}
-                     for t in META_TOOLS + self.grafts.anthropic_tools()]
+                     for t in ([] if self.static else META_TOOLS) + self.grafts.anthropic_tools()]
+            stats.tool_schema_chars = max(stats.tool_schema_chars, len(json.dumps(tools)))
             try:
                 resp = await self._chat_with_rotation(messages=messages, tools=tools, tool_choice="auto", temperature=0.2)
             except BadRequestError as e:
