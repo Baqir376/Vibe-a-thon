@@ -31,7 +31,7 @@ test("app has no serious accessibility violations", async ({ page }) => {
   await freshVisit(page);
   await agentOffline(page);
   await page.goto("/app");
-  await expect(page.getByRole("heading", { name: "Recorded runs" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Pick a question" })).toBeVisible();
   await settle(page).catch(() => {});
   expect(await audit(page)).toEqual([]);
 });

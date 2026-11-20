@@ -4,16 +4,16 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useState } from "react";
 import { LogoMark, Wordmark } from "@/components/Logo";
-import { Tilt } from "@/components/fx/Interactions";
 import { ask, listReplays, prewarm, type ReplayMeta } from "@/lib/api";
 import { useConsole } from "@/lib/useConsole";
 import { InkField } from "@/components/InkField";
 import { LaunchReveal } from "@/components/fx/Launch";
 import { Ambient } from "./Ambient";
-import { DoneStamp, MapNote, StartHere } from "./Flourish";
+import { DoneStamp, MapNote } from "./Flourish";
+import { Sidebar } from "./Sidebar";
 import { NeuralMap } from "./NeuralMap";
 import { Onboarding } from "./Onboarding";
-import { AnswerCard, ApprovalSheet, LiveCounter, Stats, StatusIsland, Timeline, Toasts } from "./Panels";
+import { ApprovalSheet, LiveCounter, Stats, StatusIsland, Toasts } from "./Panels";
 
 const FALLBACK: ReplayMeta[] = [
   { id: "delayed", title: "Delayed shipment impact", blurb: "Orders + tickets + roster in one question.",
@@ -23,7 +23,6 @@ const FALLBACK: ReplayMeta[] = [
   { id: "live-update", title: "Live update (Drift Sentinel)", blurb: "A new endpoint appears and gets used.",
     question: "Is there a revised delivery ETA for the delayed Pune insulin shipment SHP-1042? Answer in 2 lines." },
 ];
-const ICON: Record<string, string> = { delayed: "⟡", refund: "⧉", "live-update": "◎" };
 
 export function Console() {
   const c = useConsole();
@@ -112,57 +111,8 @@ export function Console() {
 
         <motion.aside initial={{ x: 40, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ duration: 0.6, delay: 0.25 }}
           className="glass-pro flex min-h-0 flex-col gap-3 overflow-y-auto rounded-[22px] p-4">
-          <div className="relative">
-            <p className="font-mono text-[10px] tracking-[0.3em] text-[#ff9a6e] uppercase">Plate III · the workspace</p>
-            <h2 className="font-display text-[22px] leading-tight font-semibold">{mode === "replay" ? <>Recorded <i className="text-[#ff9a6e]">runs</i></> : <>Ask the <i className="text-[#ff9a6e]">agent</i></>}</h2>
-            <StartHere show={!s.question && !busy} />
-          </div>
-          <div className="grid gap-2">
-            {scenarios.map((sc) => (
-              <Tilt key={sc.id} max={5}>
-                <motion.button whileTap={{ scale: 0.98 }} onClick={() => run(sc)} disabled={busy || mode === "checking"} data-cursor={mode === "replay" ? "Replay" : "Run"}
-                  data-active={c.replaying === sc.id} className="border-flow group flex w-full items-start gap-3 rounded-2xl border border-white/5 bg-white/[0.03] p-3 text-left backdrop-blur-md transition hover:bg-white/[0.06] disabled:opacity-50">
-                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-violet/15 text-violet">{ICON[sc.id] ?? "›"}</span>
-                  <span className="min-w-0">
-                    <span className="block text-sm font-semibold">{sc.title}</span>
-                    <span className="block text-[12px] leading-snug text-muted">{sc.blurb}</span>
-                  </span>
-                  <span className="ml-auto self-center font-mono text-[10px] text-muted opacity-0 transition group-hover:opacity-100">{mode === "replay" ? "▶ replay" : "▶ run"}</span>
-                </motion.button>
-              </Tilt>
-            ))}
-          </div>
-
-          {mode === "live" ? (
-            <div className="rounded-2xl border border-white/8 bg-black/25 p-3 shadow-[inset_0_1px_0_rgba(255,244,228,.06)] transition focus-within:border-violet/50 focus-within:shadow-[0_0_0_4px_rgba(255,122,69,.12)]">
-              <textarea value={q} onChange={(e) => setQ(e.target.value)} rows={2}
-                onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) run(null, q); }}
-                className="w-full resize-none bg-transparent text-[14px] leading-relaxed text-text outline-none placeholder:text-muted"
-                placeholder="…or ask anything about Meridian's operations" />
-              <div className="mt-2 flex items-center gap-2">
-                <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.96 }} onClick={() => run(null, q)} disabled={busy || !c.serverUp || !q.trim()}
-                  className="relative overflow-hidden rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-black disabled:opacity-40">
-                  {s.busy ? "Working…" : "Ask agent"}{s.busy && <span className="shimmer absolute inset-0" />}
-                </motion.button>
-                <button onClick={async () => { setWarming(true); await prewarm(); setWarming(false); }} disabled={warming || !c.serverUp}
-                  title="Synapse builds every read-only surface up front; nothing is exposed to the agent"
-                  className="rounded-full border border-line px-3 py-1.5 text-xs text-muted transition hover:text-text disabled:opacity-40">{warming ? "Prewarming…" : "Prewarm"}</button>
-                <span className="ml-auto font-mono text-[10px] text-muted">Ctrl ⏎</span>
-              </div>
-              {err && <p className="mt-2 text-xs text-danger">{err}</p>}
-            </div>
-          ) : (
-            <p className="rounded-2xl border border-line/60 px-3 py-2 text-[12px] leading-relaxed text-muted">
-              Replays are real recorded runs: same events, same timings (long model waits shortened).
-              Start the agent server and switch to <b className="text-text">Live</b> to ask your own questions.
-            </p>
-          )}
-
-          <AnswerCard s={s} />
-          <div className="min-h-[180px] flex-1 overflow-y-auto rounded-2xl border border-white/6 bg-black/25 p-3">
-            <p className="mb-2 font-display text-[15px] font-semibold">Nervous system <span className="font-mono text-[10px] font-normal tracking-wider text-muted">· live log</span></p>
-            {s.lines.length ? <Timeline lines={s.lines} /> : <p className="font-mono text-xs text-muted">0 tools live. Run a scenario and watch Synapse grow the connections.</p>}
-          </div>
+          <Sidebar s={s} mode={mode} busy={busy} replaying={c.replaying} scenarios={scenarios} run={run} q={q} setQ={setQ} err={err}
+            serverUp={c.serverUp} warming={warming} onPrewarm={async () => { setWarming(true); await prewarm(); setWarming(false); }} />
         </motion.aside>
       </div>
 

@@ -88,7 +88,7 @@ export function AnswerCard({ s }: { s: ConsoleState }) {
       {s.question && (
         <motion.div key={s.question} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
           className={`relative overflow-hidden rounded-2xl border border-white/8 bg-black/25 p-4 ${s.busy ? "border-flow" : ""}`} data-active={s.busy} data-testid="answer" aria-live="polite">
-          <p className="text-[11px] tracking-[0.2em] text-muted uppercase">Answer</p>
+          <p className="flex items-center gap-2 text-[12px] font-semibold text-text"><span aria-hidden className="flex h-6 w-6 items-center justify-center rounded-full bg-[radial-gradient(circle,#ffb089,#e8551f)] text-[11px]">✦</span>Agent&apos;s answer</p>
           {!s.answer && s.busy && (
             <div className="mt-3 space-y-2">
               {[92, 78, 85].map((w, i) => <div key={i} className="shimmer h-3 rounded bg-panel" style={{ width: `${w}%` }} />)}
