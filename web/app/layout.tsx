@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import { Caveat, Fraunces, Instrument_Sans, JetBrains_Mono } from "next/font/google";
 import { Cursor } from "@/components/fx/Cursor";
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
   description: "An agent that grows its own tools, built live by Synapse.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en" className={`${sans.variable} ${display.variable} ${hand.variable} ${jetbrains.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
