@@ -87,7 +87,7 @@ export function AnswerCard({ s }: { s: ConsoleState }) {
     <AnimatePresence mode="wait">
       {s.question && (
         <motion.div key={s.question} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-          className="glass rounded-2xl p-4" data-testid="answer" aria-live="polite">
+          className={`relative overflow-hidden rounded-2xl border border-white/8 bg-black/25 p-4 ${s.busy ? "border-flow" : ""}`} data-active={s.busy} data-testid="answer" aria-live="polite">
           <p className="text-[11px] tracking-[0.2em] text-muted uppercase">Answer</p>
           {!s.answer && s.busy && (
             <div className="mt-3 space-y-2">

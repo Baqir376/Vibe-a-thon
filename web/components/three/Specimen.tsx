@@ -15,7 +15,7 @@ const SYSTEMS = [
   { name: "tickets", color: "#b07d12", pos: new THREE.Vector3(2.1, -1.25, 0.5) },
   { name: "roster", color: "#7a3fb0", pos: new THREE.Vector3(-2.15, -1.2, -0.2) },
 ];
-const CYCLE = 7.5;
+const CYCLE = 6;
 
 function rng(seed: number) { return () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646; }
 
@@ -147,8 +147,8 @@ function Scene({ kick }: { kick: React.MutableRefObject<number> }) {
         <group key={sys.name}>
           <Graft target={sys.pos} color={sys.color} index={i} loop={loop} />
           <mesh position={sys.pos}>
-            <icosahedronGeometry args={[0.2, 1]} />
-            <meshStandardMaterial color={sys.color} roughness={0.35} flatShading />
+            <sphereGeometry args={[0.2, 48, 48]} />
+            <meshPhysicalMaterial color={sys.color} roughness={0.18} clearcoat={1} clearcoatRoughness={0.1} />
           </mesh>
           <Label name={sys.name} index={i} at={sys.pos} loop={loop} />
         </group>

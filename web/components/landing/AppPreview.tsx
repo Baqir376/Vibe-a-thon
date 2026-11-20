@@ -5,6 +5,7 @@ import { motion, useScroll, useTransform } from "motion/react";
 import { useRef } from "react";
 import { Magnetic } from "@/components/fx/Interactions";
 import { GraftTerminal } from "./Hero";
+import { InkBackdrop, Wash } from "@/components/fx/InkBackdrop";
 
 /** Apple-style product reveal: the app tilts back in 3D, then flattens as you scroll into it. */
 export function AppPreview() {
@@ -16,12 +17,14 @@ export function AppPreview() {
   const glow = useTransform(scrollYProgress, [0.4, 1], [0, 1]);
 
   return (
-    <section id="preview" className="relative px-5 pt-10 pb-28">
-      <div className="mx-auto mb-14 max-w-3xl text-center">
+    <section id="preview" className="relative overflow-hidden px-5 pt-24 pb-28">
+      <Wash tone="cobalt" />
+      <InkBackdrop kind="stellate" side="left" />
+      <div className="relative z-10 mx-auto mb-14 max-w-3xl text-center">
         <p className="mb-3 font-mono text-xs tracking-[0.3em] text-signal-ink uppercase">Plate II · the app</p>
-        <h2 className="font-display text-4xl font-semibold tracking-tight text-carbon sm:text-6xl">One question. <i className="text-signal">Four systems.</i><br />Zero pre-wired tools.</h2>
+        <h2 className="font-display text-4xl font-semibold tracking-tight text-carbon sm:text-6xl">One question. <i className="text-signal-ink sm:text-signal">Four systems.</i><br />Zero pre-wired tools.</h2>
       </div>
-      <div ref={ref} style={{ perspective: 1400 }} className="mx-auto max-w-5xl">
+      <div ref={ref} style={{ perspective: 1400 }} className="relative z-10 mx-auto max-w-5xl">
         <motion.div style={{ rotateX, scale, y, transformOrigin: "50% 100%" }} className="relative">
           <motion.div style={{ opacity: glow }} className="pointer-events-none absolute -inset-6 rounded-[40px] bg-signal/15 blur-[60px]" />
           <div className="glass relative overflow-hidden rounded-[22px] border-[1.5px] border-carbon shadow-[8px_8px_0_#16130f]">
@@ -36,7 +39,7 @@ export function AppPreview() {
           </div>
         </motion.div>
       </div>
-      <div className="mt-14 flex justify-center">
+      <div className="relative z-10 mt-14 flex justify-center">
         <Magnetic>
           <Link href="/app" data-cursor="Launch" className="inline-flex items-center gap-2 rounded-full bg-carbon px-8 py-4 text-lg font-semibold text-paper shadow-[4px_4px_0_#e8551f]">
             Try it yourself →

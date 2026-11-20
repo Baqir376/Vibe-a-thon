@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "motion/react";
 import { useRef, useState } from "react";
+import { InkBackdrop } from "@/components/fx/InkBackdrop";
 
 const STEPS = [
   { k: "01", title: "Find", cmd: "find_capability([...])",
@@ -22,6 +23,7 @@ export function HowItWorks() {
 
   return (
     <section id="how" ref={ref} className="relative h-[340vh]">
+      <InkBackdrop kind="pyramidal" side="left" className="opacity-80" />
       <div className="sticky top-0 flex h-screen items-center overflow-hidden">
         <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-5 lg:grid-cols-2">
           <div>

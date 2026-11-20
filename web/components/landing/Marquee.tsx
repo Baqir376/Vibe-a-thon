@@ -10,7 +10,7 @@ export function Marquee() {
     <div className="relative -rotate-1 overflow-hidden border-y-[1.5px] border-carbon bg-carbon py-3 text-paper">
       <div className="marquee flex w-max gap-10 whitespace-nowrap font-mono text-sm">
         {row.map((t, i) => (
-          <span key={i} className="flex items-center gap-10">{t}<span className="text-signal">✺</span></span>
+          <span key={i} className="flex items-center gap-10">{t}<span className="inline-block h-1.5 w-1.5 rounded-full bg-signal" aria-hidden /></span>
         ))}
       </div>
     </div>

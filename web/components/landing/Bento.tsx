@@ -3,6 +3,7 @@
 import { AnimatePresence, motion, useInView, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Tilt } from "@/components/fx/Interactions";
+import { InkBackdrop, Wash } from "@/components/fx/InkBackdrop";
 
 function Card({ className = "", title, kicker, children, delay = 0 }: { className?: string; title: string; kicker: string; children: ReactNode; delay?: number }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -27,7 +28,10 @@ function Card({ className = "", title, kicker, children, delay = 0 }: { classNam
 
 export function Bento() {
   return (
-    <section id="notes" className="relative mx-auto max-w-6xl px-5 py-28">
+    <section id="notes" className="relative px-5 py-28">
+      <Wash tone="moss" />
+      <InkBackdrop kind="pyramidal" side="right" />
+      <div className="relative z-10 mx-auto max-w-6xl">
       <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mb-12 max-w-4xl">
         <p className="mb-3 font-mono text-xs tracking-[0.3em] text-signal-ink uppercase">Field notes</p>
         <h2 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">Synapse isn&apos;t a setup step here.<br /><span className="text-graphite">It&apos;s the agent&apos;s nervous system.</span></h2>
@@ -45,6 +49,7 @@ export function Bento() {
         <Card kicker="Safety" title="Least privilege by construction" delay={0.14}><Approval /></Card>
         <Card kicker="Cost" title="Runs on free models" delay={0.18}><Models /></Card>
         <Card className="md:col-span-3" kicker="Depth" title="12 Synapse CLI bugs found and written up" delay={0.1}><Bugs /></Card>
+      </div>
       </div>
     </section>
   );

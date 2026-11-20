@@ -82,10 +82,10 @@ export function Hero() {
           </motion.p>
         </div>
 
-        <motion.figure initial={{ opacity: 0, rotate: 3, y: 40 }} animate={{ opacity: 1, rotate: 1.2, y: 0 }}
+        <motion.figure initial={{ opacity: 0, y: 40, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ delay: B + 0.35, duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
-          className="card-paper relative mx-auto w-full max-w-[520px] rounded-[18px] p-3">
-          <div className="graph-paper relative aspect-[1/1] overflow-hidden rounded-[12px] border border-rule bg-paper">
+          className="card-paper relative mx-auto w-full max-w-[560px] self-center rounded-[22px] p-2.5">
+          <div className="graph-paper relative aspect-[1/1] overflow-hidden rounded-[16px] bg-[radial-gradient(ellipse_at_50%_45%,#fbf8f1_0%,#f3eee3_70%)]">
             <Specimen />
           </div>
           <figcaption className="flex items-baseline justify-between px-1 pt-3 font-mono text-[11px] text-graphite">

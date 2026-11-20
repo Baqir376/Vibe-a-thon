@@ -4,6 +4,7 @@ import Link from "next/link";
 import { animate, motion, useInView } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { Magnetic } from "@/components/fx/Interactions";
+import { InkBackdrop, Wash } from "@/components/fx/InkBackdrop";
 
 function Count({ to, decimals = 0, suffix = "" }: { to: number; decimals?: number; suffix?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
@@ -32,7 +33,10 @@ const BENCH = [
 
 export function Proof() {
   return (
-    <section id="proof" className="relative mx-auto max-w-6xl px-5 py-28">
+    <section id="proof" className="relative px-5 py-28">
+      <Wash tone="signal" />
+      <InkBackdrop kind="stellate" side="right" />
+      <div className="relative z-10 mx-auto max-w-6xl">
       <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mb-12 max-w-4xl">
         <p className="mb-3 font-mono text-xs tracking-[0.3em] text-signal-ink uppercase">Proof, measured</p>
         <h2 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">Numbers from real runs,<br /><span className="text-graphite">including the unflattering ones.</span></h2>
@@ -81,6 +85,7 @@ export function Proof() {
           least privilege, live updates and verified fusion today, and scale tomorrow: hundreds of endpoints do not
           fit in a free-tier request at all. Full table in <code className="font-mono text-signal-ink">docs/benchmark.md</code>.
         </p>
+      </div>
       </div>
     </section>
   );

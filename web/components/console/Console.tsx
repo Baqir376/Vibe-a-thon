@@ -7,6 +7,7 @@ import { LogoMark, Wordmark } from "@/components/Logo";
 import { Tilt } from "@/components/fx/Interactions";
 import { ask, listReplays, prewarm, type ReplayMeta } from "@/lib/api";
 import { useConsole } from "@/lib/useConsole";
+import { Ambient } from "./Ambient";
 import { NeuralMap } from "./NeuralMap";
 import { Onboarding } from "./Onboarding";
 import { AnswerCard, ApprovalSheet, LiveCounter, Stats, StatusIsland, Timeline, Toasts } from "./Panels";
@@ -62,10 +63,11 @@ export function Console() {
   };
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
+    <div className="relative flex h-screen flex-col gap-3 overflow-hidden p-3">
+      <Ambient />
       <motion.header initial={{ y: -30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5 }}
-        className="relative z-30 flex items-center justify-between border-b border-line/70 px-5 py-3">
-        <Link href="/" className="flex items-center gap-2" data-cursor="Home"><LogoMark size={24} /><Wordmark className="text-[16px]" /></Link>
+        className="glass-pro relative z-30 flex items-center justify-between rounded-2xl px-5 py-2.5">
+        <Link href="/" className="flex items-center gap-2.5" data-cursor="Home"><LogoMark size={24} /><span className="leading-tight"><Wordmark className="block text-[16px]" /><span className="block font-mono text-[9.5px] tracking-[0.25em] text-muted uppercase">Synapse workspace</span></span></Link>
         <div className="absolute left-1/2 -translate-x-1/2">
           <StatusIsland phase={s.phase === "offline" && mode === "replay" ? "idle" : s.phase}
             status={s.phase === "offline" && mode === "replay" ? "Replay mode · pick a scenario" : s.phase === "offline" && mode === "live" ? "Agent server offline" : s.status} />
@@ -77,9 +79,10 @@ export function Console() {
         </div>
       </motion.header>
 
-      <div className="grid min-h-0 flex-1 lg:grid-cols-[1fr_430px]">
+      <div className="relative z-10 grid min-h-0 flex-1 gap-3 lg:grid-cols-[1fr_420px]">
         <motion.section initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8, delay: 0.15 }}
-          className="dot-grid relative min-h-0 overflow-hidden">
+          className="glass-pro relative min-h-0 overflow-hidden rounded-[22px]">
+          <div className="dot-grid pointer-events-none absolute inset-0 opacity-60" />
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(232,85,31,.12),transparent_65%)]" />
           <div className="absolute inset-0 p-4"><NeuralMap s={s} onPulseDone={onPulseDone} /></div>
           <div className="pointer-events-none absolute top-5 left-6"><LiveCounter live={s.live.length} total={s.caps.length || 0} /></div>
@@ -100,13 +103,13 @@ export function Console() {
         </motion.section>
 
         <motion.aside initial={{ x: 40, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ duration: 0.6, delay: 0.25 }}
-          className="flex min-h-0 flex-col gap-3 overflow-y-auto border-l border-line/70 bg-night/60 p-4">
+          className="glass-pro flex min-h-0 flex-col gap-3 overflow-y-auto rounded-[22px] p-4">
           <p className="text-[11px] tracking-[0.2em] text-muted uppercase">{mode === "replay" ? "Recorded scenarios" : "Try a scenario"}</p>
           <div className="grid gap-2">
             {scenarios.map((sc) => (
               <Tilt key={sc.id} max={5}>
                 <motion.button whileTap={{ scale: 0.98 }} onClick={() => run(sc)} disabled={busy || mode === "checking"} data-cursor={mode === "replay" ? "Replay" : "Run"}
-                  className={`glass group flex w-full items-start gap-3 rounded-2xl p-3 text-left transition disabled:opacity-50 ${c.replaying === sc.id ? "border-violet/70" : "hover:border-violet/50"}`}>
+                  data-active={c.replaying === sc.id} className="border-flow group flex w-full items-start gap-3 rounded-2xl border border-white/5 bg-white/[0.03] p-3 text-left backdrop-blur-md transition hover:bg-white/[0.06] disabled:opacity-50">
                   <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-violet/15 text-violet">{ICON[sc.id] ?? "›"}</span>
                   <span className="min-w-0">
                     <span className="block text-sm font-semibold">{sc.title}</span>
@@ -119,7 +122,7 @@ export function Console() {
           </div>
 
           {mode === "live" ? (
-            <div className="glass rounded-2xl p-3">
+            <div className="rounded-2xl border border-white/8 bg-black/25 p-3 shadow-[inset_0_1px_0_rgba(255,244,228,.06)] transition focus-within:border-violet/50 focus-within:shadow-[0_0_0_4px_rgba(255,122,69,.12)]">
               <textarea value={q} onChange={(e) => setQ(e.target.value)} rows={2}
                 onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) run(null, q); }}
                 className="w-full resize-none bg-transparent text-[14px] leading-relaxed text-text outline-none placeholder:text-muted"
@@ -144,7 +147,7 @@ export function Console() {
           )}
 
           <AnswerCard s={s} />
-          <div className="min-h-[180px] flex-1 overflow-y-auto rounded-2xl border border-line/60 bg-ink/40 p-3">
+          <div className="min-h-[180px] flex-1 overflow-y-auto rounded-2xl border border-white/6 bg-black/25 p-3">
             <p className="mb-2 text-[11px] tracking-[0.2em] text-muted uppercase">Nervous system</p>
             {s.lines.length ? <Timeline lines={s.lines} /> : <p className="font-mono text-xs text-muted">0 tools live. Run a scenario and watch Synapse grow the connections.</p>}
           </div>
