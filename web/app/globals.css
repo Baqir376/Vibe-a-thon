@@ -33,7 +33,7 @@
   --color-rule: #d6ccb8;
   --color-signal: #e8551f;
   --color-signal-deep: #b8401a;
-  --color-signal-ink: #b23c14;   /* orange for small text on paper: 4.9:1 (WCAG AA) */
+  --color-signal-ink: #9c3310;   /* orange for small text on any paper tone: >= 5.1:1 (WCAG AA) */
   --color-cobalt: #2346d8;
   --color-moss: #3e7c4f;
   --color-ochre: #b07d12;
