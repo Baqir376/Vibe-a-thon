@@ -48,7 +48,8 @@ export function NeuralMap({ s, onPulseDone }: { s: ConsoleState; onPulseDone: (i
 
       {/* dendrites */}
       {s.systems.map((sys) => pos[sys.name] && (
-        <line key={sys.name} x1={C.x} y1={C.y} x2={pos[sys.name].x} y2={pos[sys.name].y} stroke="#2a251e" strokeDasharray="2 7" />
+        <motion.path key={sys.name} d={dendrite(pos[sys.name].x, pos[sys.name].y)} fill="none" stroke="#4a3f33" strokeWidth={1.6} strokeLinecap="round"
+          initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }} />
       ))}
       {eps.map((e) => (
         <line key={"d" + e.k} x1={pos[e.sys].x} y1={pos[e.sys].y} x2={e.x} y2={e.y} stroke="#2a251e" />
@@ -74,6 +75,9 @@ export function NeuralMap({ s, onPulseDone }: { s: ConsoleState; onPulseDone: (i
           </g>
         );
       })}
+
+      {/* a spark burst each time an endpoint is grafted */}
+      {eps.filter((e) => s.live.includes(e.k)).map((e) => <Spark key={"s" + e.k} x={e.x} y={e.y} color={e.sys.endsWith("_fused") ? "#ff7a45" : e.cap.mutating ? "#f2c14e" : "#8fd18a"} />)}
 
       {/* signal pulses for tool calls */}
       {s.pulses.map((p) => <PulseDot key={p.id} id={p.id} pathId={"path-" + p.key} onDone={onPulseDone} />)}
@@ -147,6 +151,14 @@ export function NeuralMap({ s, onPulseDone }: { s: ConsoleState; onPulseDone: (i
         );
       })}
 
+      {/* agent core: orbiting rings, faster while it works */}
+      {[{ r: 92, dash: "2 10", dur: 40, dir: 1 }, { r: 112, dash: "28 14 4 14", dur: 60, dir: -1 }].map((o) => (
+        <motion.circle key={o.r} cx={C.x} cy={C.y} r={o.r} fill="none" stroke="#ff7a45" strokeOpacity={s.busy ? 0.55 : 0.22} strokeWidth={1.2}
+          strokeDasharray={o.dash} style={{ transformOrigin: `${C.x}px ${C.y}px` }}
+          animate={{ rotate: 360 * o.dir }} transition={{ duration: s.busy ? o.dur / 5 : o.dur, repeat: Infinity, ease: "linear" }} />
+      ))}
+      {s.busy && <motion.circle cx={C.x + 92} cy={C.y} r={4} fill="#ffb089" style={{ transformOrigin: `${C.x}px ${C.y}px` }} filter="url(#glow)"
+        animate={{ rotate: 360 }} transition={{ duration: 2.2, repeat: Infinity, ease: "linear" }} />}
       {/* agent core */}
       <motion.circle cx={C.x} cy={C.y} r={70} fill="url(#core)" filter="url(#glow)"
         animate={{ opacity: s.busy ? [0.25, 0.55, 0.25] : [0.18, 0.3, 0.18], r: s.busy ? [66, 80, 66] : [66, 72, 66] }}
@@ -158,6 +170,29 @@ export function NeuralMap({ s, onPulseDone }: { s: ConsoleState; onPulseDone: (i
         {s.live.length} {s.live.length === 1 ? "tool" : "tools"}
       </motion.text>
     </svg>
+  );
+}
+
+/** Slightly wavy, hand-drawn looking dendrite from the core to a system. */
+function dendrite(x: number, y: number) {
+  const mx = (C.x + x) / 2, my = (C.y + y) / 2, dx = x - C.x, dy = y - C.y, n = Math.hypot(dx, dy) || 1;
+  const off = 0.14 * n;
+  const q1 = { x: C.x + dx * 0.3 - (dy / n) * off, y: C.y + dy * 0.3 + (dx / n) * off };
+  const q2 = { x: C.x + dx * 0.72 + (dy / n) * off * 0.7, y: C.y + dy * 0.72 - (dx / n) * off * 0.7 };
+  return `M ${C.x} ${C.y} Q ${q1.x} ${q1.y} ${mx} ${my} Q ${q2.x} ${q2.y} ${x} ${y}`;
+}
+
+/** One-shot burst: a ring and eight sparks flying out. */
+function Spark({ x, y, color }: { x: number; y: number; color: string }) {
+  return (
+    <g pointerEvents="none">
+      <motion.circle cx={x} cy={y} fill="none" stroke={color} strokeWidth={2} initial={{ r: 6, opacity: 0.9 }} animate={{ r: 34, opacity: 0 }} transition={{ duration: 0.8, ease: "easeOut" }} />
+      {Array.from({ length: 8 }, (_, i) => {
+        const a = (i / 8) * Math.PI * 2;
+        return <motion.circle key={i} r={2.2} fill={color} initial={{ cx: x, cy: y, opacity: 1 }}
+          animate={{ cx: x + Math.cos(a) * 30, cy: y + Math.sin(a) * 30, opacity: 0 }} transition={{ duration: 0.7, ease: "easeOut" }} />;
+      })}
+    </g>
   );
 }
 

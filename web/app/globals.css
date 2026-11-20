@@ -199,3 +199,7 @@ html.booted .boot-overlay { display: none; }
   mask-image: linear-gradient(to bottom, transparent 0%, #000 30%, #000 70%, transparent 100%);
   animation: floor-move 4s linear infinite;
 }
+
+/* launch iris: only visible when arriving from a Launch link */
+.launch-overlay { display: none; }
+html.launching .launch-overlay { display: block; }

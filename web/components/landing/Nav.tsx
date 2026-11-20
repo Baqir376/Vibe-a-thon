@@ -1,5 +1,6 @@
 "use client";
 
+import { LaunchLink } from "@/components/fx/Launch";
 import Link from "next/link";
 import { motion, useMotionValueEvent, useScroll } from "motion/react";
 import { useState } from "react";
@@ -24,11 +25,11 @@ export function Nav() {
           ))}
         </div>
         <Magnetic strength={0.2}>
-          <Link href="/app" data-cursor="Launch"
+          <LaunchLink data-cursor="Launch"
             className="inline-flex items-center gap-2 rounded-full bg-carbon px-5 py-2 text-sm font-semibold text-paper">
             <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-signal opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-signal" /></span>
             Launch app
-          </Link>
+          </LaunchLink>
         </Magnetic>
       </div>
     </motion.nav>

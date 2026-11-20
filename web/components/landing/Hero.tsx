@@ -1,7 +1,7 @@
 "use client";
 
+import { LaunchLink } from "@/components/fx/Launch";
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 import { InkField } from "@/components/InkField";
@@ -63,11 +63,11 @@ export function Hero() {
 
           <motion.div {...rise(B + 0.75)} className="mt-9 flex flex-wrap items-center gap-4">
             <Magnetic>
-              <Link href="/app" data-cursor="Launch"
+              <LaunchLink data-cursor="Launch"
                 className="group inline-flex items-center gap-2.5 rounded-full bg-carbon px-7 py-3.5 font-semibold text-paper shadow-[4px_4px_0_#e8551f] transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0_#e8551f]">
                 Launch the app
                 <motion.span animate={{ x: [0, 4, 0] }} transition={{ repeat: Infinity, duration: 1.6 }}>→</motion.span>
-              </Link>
+              </LaunchLink>
             </Magnetic>
             <Magnetic>
               <a href="#preview" data-cursor="Watch"

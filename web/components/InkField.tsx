@@ -42,7 +42,9 @@ function neuron(x: number, y: number, big: boolean): Neuron {
   return { x, y, r: big ? 7 : 3.4, branches, born: performance.now(), hot: big, signals: [] };
 }
 
-export function InkField({ className = "" }: { className?: string }) {
+export function InkField({ className = "", tone = "paper" }: { className?: string; tone?: "paper" | "night" }) {
+  const ink = tone === "night" ? "241,234,220" : "22,19,15";
+  const sig = tone === "night" ? "255,122,69" : "232,85,31";
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const canvas = ref.current!;
@@ -81,7 +83,7 @@ export function InkField({ className = "" }: { className?: string }) {
           const upto = Math.max(1, Math.floor(p * (b.pts.length - 1)));
           for (let i = 1; i <= upto; i++) {
             const t = i / (b.pts.length - 1);
-            ctx.strokeStyle = `rgba(22,19,15,${(n.hot ? 0.62 : 0.4) * fade})`;
+            ctx.strokeStyle = `rgba(${ink},${(n.hot ? 0.62 : 0.4) * (tone === "night" ? 0.55 : 1) * fade})`;
             ctx.lineWidth = Math.max(0.35, b.w * (1 - t * 0.75));
             ctx.beginPath(); ctx.moveTo(b.pts[i - 1][0], b.pts[i - 1][1]); ctx.lineTo(b.pts[i][0], b.pts[i][1]); ctx.stroke();
           }
@@ -89,15 +91,17 @@ export function InkField({ className = "" }: { className?: string }) {
           if (!reduce && p >= 1 && fade > 0.6 && Math.random() < (n.hot ? 0.012 : 0.003)) n.signals.push({ b: bi, t: 0 });
         });
         // soma
-        ctx.fillStyle = n.hot ? `rgba(232,85,31,${fade})` : `rgba(22,19,15,${0.55 * fade})`;
+        ctx.fillStyle = n.hot ? `rgba(${sig},${fade})` : `rgba(${ink},${0.55 * fade})`;
+        if (tone === "night" && n.hot) { ctx.shadowColor = `rgba(${sig},.9)`; ctx.shadowBlur = 16; }
         ctx.beginPath(); ctx.ellipse(n.x, n.y, n.r * 1.15, n.r, 0.4, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
         // signals
         n.signals = n.signals.filter((s) => s.t <= 1);
         for (const s of n.signals) {
           s.t += 0.03;
           const pts = n.branches[s.b].pts, k = Math.min(pts.length - 1, Math.floor(s.t * (pts.length - 1)));
           const [x, y] = pts[k];
-          ctx.fillStyle = `rgba(232,85,31,${0.9 * fade})`;
+          ctx.fillStyle = `rgba(${sig},${0.9 * fade})`;
           ctx.beginPath(); ctx.arc(x, y, 2.6, 0, Math.PI * 2); ctx.fill();
         }
       }
@@ -138,6 +142,6 @@ export function InkField({ className = "" }: { className?: string }) {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerdown", onDown);
     };
-  }, []);
+  }, [ink, sig, tone]);
   return <canvas ref={ref} className={`absolute inset-0 h-full w-full ${className}`} aria-hidden />;
 }

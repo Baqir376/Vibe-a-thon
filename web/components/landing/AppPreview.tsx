@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { LaunchLink } from "@/components/fx/Launch";
 import { motion, useScroll, useTransform } from "motion/react";
 import { useRef } from "react";
 import { Magnetic } from "@/components/fx/Interactions";
@@ -41,9 +41,9 @@ export function AppPreview() {
       </div>
       <div className="relative z-10 mt-14 flex justify-center">
         <Magnetic>
-          <Link href="/app" data-cursor="Launch" className="inline-flex items-center gap-2 rounded-full bg-carbon px-8 py-4 text-lg font-semibold text-paper shadow-[4px_4px_0_#e8551f]">
+          <LaunchLink data-cursor="Launch" className="inline-flex items-center gap-2 rounded-full bg-carbon px-8 py-4 text-lg font-semibold text-paper shadow-[4px_4px_0_#e8551f]">
             Try it yourself →
-          </Link>
+          </LaunchLink>
         </Magnetic>
       </div>
     </section>

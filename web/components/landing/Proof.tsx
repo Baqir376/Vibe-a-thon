@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { LaunchLink } from "@/components/fx/Launch";
 import { animate, motion, useInView } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { Magnetic } from "@/components/fx/Interactions";
@@ -100,9 +100,9 @@ export function FinalCTA() {
         <h2 className="font-display text-5xl font-extrabold tracking-tight sm:text-6xl">Watch it <span className="text-gradient">grow.</span></h2>
         <p className="mx-auto mt-5 max-w-xl text-lg text-carbon/85">Ask a question that spans four legacy systems. Watch Synapse build the connections, the agent use them, and the access disappear.</p>
         <div className="mt-9"><Magnetic>
-          <Link href="/app" data-cursor="Launch" className="inline-flex items-center gap-2 rounded-full bg-carbon px-9 py-4 text-lg font-semibold text-paper shadow-[4px_4px_0_#e8551f]">
+          <LaunchLink data-cursor="Launch" className="inline-flex items-center gap-2 rounded-full bg-carbon px-9 py-4 text-lg font-semibold text-paper shadow-[4px_4px_0_#e8551f]">
             Launch the app →
-          </Link>
+          </LaunchLink>
         </Magnetic></div>
       </motion.div>
       <footer className="relative mx-auto mt-28 flex max-w-6xl flex-wrap items-center justify-between gap-4 border-t border-rule pt-6 text-xs text-graphite">

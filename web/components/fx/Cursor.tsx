@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useMotionValue, useSpring } from "motion/react";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 /**
@@ -15,6 +16,10 @@ export function Cursor() {
   const [hidden, setHidden] = useState(true);
   const x = useMotionValue(-100), y = useMotionValue(-100);
   const rx = useSpring(x, { stiffness: 380, damping: 32, mass: 0.6 });
+  const path = usePathname();
+  // a route change removes the hovered element without a pointermove: drop its label
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- reset on navigation
+  useEffect(() => { setHover({ on: false, label: null }); }, [path]);
   const ry = useSpring(y, { stiffness: 380, damping: 32, mass: 0.6 });
 
   useEffect(() => {

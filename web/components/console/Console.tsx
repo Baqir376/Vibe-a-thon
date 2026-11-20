@@ -7,7 +7,10 @@ import { LogoMark, Wordmark } from "@/components/Logo";
 import { Tilt } from "@/components/fx/Interactions";
 import { ask, listReplays, prewarm, type ReplayMeta } from "@/lib/api";
 import { useConsole } from "@/lib/useConsole";
+import { InkField } from "@/components/InkField";
+import { LaunchReveal } from "@/components/fx/Launch";
 import { Ambient } from "./Ambient";
+import { DoneStamp, MapNote, StartHere } from "./Flourish";
 import { NeuralMap } from "./NeuralMap";
 import { Onboarding } from "./Onboarding";
 import { AnswerCard, ApprovalSheet, LiveCounter, Stats, StatusIsland, Timeline, Toasts } from "./Panels";
@@ -65,6 +68,7 @@ export function Console() {
   return (
     <div className="relative flex h-screen flex-col gap-3 overflow-hidden p-3">
       <Ambient />
+      <LaunchReveal />
       <motion.header initial={{ y: -30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5 }}
         className="glass-pro relative z-30 flex items-center justify-between rounded-2xl px-5 py-2.5">
         <Link href="/" className="flex items-center gap-2.5" data-cursor="Home"><LogoMark size={24} /><span className="leading-tight"><Wordmark className="block text-[16px]" /><span className="block font-mono text-[9.5px] tracking-[0.25em] text-muted uppercase">Synapse workspace</span></span></Link>
@@ -83,8 +87,12 @@ export function Console() {
         <motion.section initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8, delay: 0.15 }}
           className="glass-pro relative min-h-0 overflow-hidden rounded-[22px]">
           <div className="dot-grid pointer-events-none absolute inset-0 opacity-60" />
+          <InkField tone="night" className="pointer-events-none opacity-70" />
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(232,85,31,.12),transparent_65%)]" />
           <div className="absolute inset-0 p-4"><NeuralMap s={s} onPulseDone={onPulseDone} /></div>
+          <MapNote show={!s.question && !busy && s.systems.length > 0} />
+          <DoneStamp show={s.phase === "done"} tools={s.live.length} peak={s.stats.peak} />
+          <p aria-hidden className="pointer-events-none absolute right-6 bottom-12 font-mono text-[10.5px] tracking-wider text-muted/80"><b className="text-text/70">Fig. 3</b> · the agent&apos;s nervous system, live</p>
           <div className="pointer-events-none absolute top-5 left-6"><LiveCounter live={s.live.length} total={s.caps.length || 0} /></div>
           <div className="absolute bottom-5 left-6"><Stats stats={s.stats} /></div>
           <div className="absolute right-5 bottom-5 flex flex-wrap justify-end gap-4 text-[11px] text-muted">
@@ -104,7 +112,11 @@ export function Console() {
 
         <motion.aside initial={{ x: 40, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ duration: 0.6, delay: 0.25 }}
           className="glass-pro flex min-h-0 flex-col gap-3 overflow-y-auto rounded-[22px] p-4">
-          <p className="text-[11px] tracking-[0.2em] text-muted uppercase">{mode === "replay" ? "Recorded scenarios" : "Try a scenario"}</p>
+          <div className="relative">
+            <p className="font-mono text-[10px] tracking-[0.3em] text-[#ff9a6e] uppercase">Plate III · the workspace</p>
+            <h2 className="font-display text-[22px] leading-tight font-semibold">{mode === "replay" ? <>Recorded <i className="text-[#ff9a6e]">runs</i></> : <>Ask the <i className="text-[#ff9a6e]">agent</i></>}</h2>
+            <StartHere show={!s.question && !busy} />
+          </div>
           <div className="grid gap-2">
             {scenarios.map((sc) => (
               <Tilt key={sc.id} max={5}>
@@ -148,7 +160,7 @@ export function Console() {
 
           <AnswerCard s={s} />
           <div className="min-h-[180px] flex-1 overflow-y-auto rounded-2xl border border-white/6 bg-black/25 p-3">
-            <p className="mb-2 text-[11px] tracking-[0.2em] text-muted uppercase">Nervous system</p>
+            <p className="mb-2 font-display text-[15px] font-semibold">Nervous system <span className="font-mono text-[10px] font-normal tracking-wider text-muted">· live log</span></p>
             {s.lines.length ? <Timeline lines={s.lines} /> : <p className="font-mono text-xs text-muted">0 tools live. Run a scenario and watch Synapse grow the connections.</p>}
           </div>
         </motion.aside>
