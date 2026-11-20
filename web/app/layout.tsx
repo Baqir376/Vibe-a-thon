@@ -20,7 +20,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={`${sans.variable} ${display.variable} ${hand.variable} ${jetbrains.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
         {/* Before first paint: returning visitors never see (or get blocked by) the boot overlay. */}
-        <script dangerouslySetInnerHTML={{ __html: "try{if(sessionStorage.getItem('synapto-boot')==='1')document.documentElement.classList.add('booted');if(sessionStorage.getItem('synapto-launch')==='1')document.documentElement.classList.add('launching')}catch(e){}" }} />
+        <script dangerouslySetInnerHTML={{ __html: "try{if(sessionStorage.getItem('synapto-boot')==='1')document.documentElement.classList.add('booted');if(sessionStorage.getItem('synapto-launch')==='1')document.documentElement.classList.add('launching');var t=localStorage.getItem('synapto-theme');if(t)document.documentElement.setAttribute('data-app-theme',t)}catch(e){}" }} />
       </head>
       <body className="grain min-h-full">
         <Cursor />

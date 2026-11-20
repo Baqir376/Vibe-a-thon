@@ -26,7 +26,7 @@ export function Onboarding({ open, onClose, onDemo }: { open: boolean; onClose: 
             <div className="p-7">
               <div className="mb-5 flex gap-1.5">
                 {STEPS.map((s, k) => (
-                  <motion.span key={s.n} className="h-1 flex-1 rounded-full" animate={{ backgroundColor: k <= i ? s.color : "#2e2820" }} />
+                  <motion.span key={s.n} className="h-1 flex-1 rounded-full" animate={{ backgroundColor: k <= i ? s.color : "var(--color-line)" }} />
                 ))}
               </div>
               <AnimatePresence mode="wait">
@@ -40,10 +40,10 @@ export function Onboarding({ open, onClose, onDemo }: { open: boolean; onClose: 
                 <button onClick={onClose} className="text-sm text-muted transition hover:text-text">Skip</button>
                 <div className="ml-auto flex gap-2">
                   {i > 0 && <button onClick={() => setI(i - 1)} className="rounded-full border border-line px-4 py-2 text-sm text-muted hover:text-text">Back</button>}
-                  {!last && <button onClick={() => setI(i + 1)} className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-black">Next</button>}
+                  {!last && <button onClick={() => setI(i + 1)} className="rounded-full bg-text px-5 py-2 text-sm font-semibold text-ink">Next</button>}
                   {last && (
                     <button onClick={() => { onClose(); onDemo(); }} data-cursor="Go"
-                      className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-black shadow-[0_0_40px_rgba(255,176,137,.5)]">
+                      className="rounded-full bg-text px-5 py-2 text-sm font-semibold text-ink shadow-[0_0_40px_rgba(255,176,137,.5)]">
                       Show me a run →
                     </button>
                   )}
@@ -67,7 +67,7 @@ function Illustration({ step }: { step: number }) {
           <g key={k}>
             <motion.path d={`M 280 88 Q ${(280 + x) / 2} ${y} ${x} ${y}`} fill="none" stroke={k === 2 && step === 2 ? "#f2c14e" : "#8fd18a"} strokeWidth={2}
               animate={{ pathLength: on ? 1 : 0, opacity: on ? 1 : 0 }} transition={{ duration: 0.7, delay: k * 0.12 }} />
-            <motion.circle cx={x} cy={y} animate={{ r: on ? 9 : 6, fill: on ? (k === 2 && step === 2 ? "#f2c14e" : "#8fd18a") : "#3a3229" }} />
+            <motion.circle cx={x} cy={y} animate={{ r: on ? 9 : 6, fill: on ? (k === 2 && step === 2 ? "#f2c14e" : "#8fd18a") : "var(--color-line)" }} />
           </g>
         );
       })}

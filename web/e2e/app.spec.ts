@@ -19,7 +19,7 @@ test.describe("the app (/app)", () => {
     await freshVisit(page);
     await agentOffline(page);
     await page.goto("/app");
-    await expect(page.getByRole("heading", { name: "Pick a question" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /What should it figure out/ })).toBeVisible();
     await page.getByRole("button", { name: /Delayed shipment impact/ }).click();
     // tools grow during the run…
     await expect(page.getByText(/\d+ tools? live|Calling|grafted/).first()).toBeVisible({ timeout: 30_000 });
@@ -34,7 +34,7 @@ test.describe("the app (/app)", () => {
     await freshVisit(page);
     await agentOffline(page);
     await page.goto("/app");
-    await expect(page.getByRole("heading", { name: "Pick a question" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /What should it figure out/ })).toBeVisible();
     await page.getByRole("button", { name: /Process a refund/ }).click();
     await expect(page.getByText(/Grant write access\?|Allow this action\?/).first()).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(/RF-3001|8,?847/).first()).toBeVisible({ timeout: 60_000 });

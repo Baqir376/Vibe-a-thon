@@ -1,39 +1,36 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReplayMeta } from "@/lib/api";
 import type { ConsoleState, Phase } from "@/lib/useConsole";
 import { AnswerCard, Timeline } from "./Panels";
 
-/* Friendly framing for the recorded scenarios (the data keeps its technical titles). */
-const FRIENDLY: Record<string, { emoji: string; title: string; tint: string; systems: [string, string][] }> = {
-  delayed: { emoji: "📦", title: "A delivery is late. Who's affected?", tint: "#7d95ff",
-    systems: [["Orders", "#7d95ff"], ["Tickets", "#f2c14e"], ["Roster", "#c792ea"]] },
-  refund: { emoji: "💸", title: "Refund a late order, safely", tint: "#f2c14e",
-    systems: [["Tickets", "#f2c14e"], ["Fused tool", "#ff7a45"]] },
-  "live-update": { emoji: "✨", title: "A new feature ships mid-demo", tint: "#8fd18a",
-    systems: [["Orders", "#7d95ff"], ["New endpoint", "#ffd166"]] },
+/* Plain-language framing for the recorded scenarios (the data keeps its technical titles). */
+const CASES: Record<string, { title: string; systems: string[] }> = {
+  delayed: { title: "A delivery is late. Who's affected?", systems: ["orders", "tickets", "roster"] },
+  refund: { title: "Refund a late order, safely", systems: ["tickets", "fused tool"] },
+  "live-update": { title: "A new feature ships mid-demo", systems: ["orders", "new endpoint"] },
 };
 
 /* What the agent is doing, in plain words. */
-const NARRATE: Record<Phase, [string, string, string]> = {
-  offline: ["😴", "Waiting to start", "Pick a question to wake the agent."],
-  idle: ["🌱", "Ready", "It holds zero tools until a question needs one."],
-  thinking: ["🧠", "Thinking", "Working out which information it needs."],
-  searching: ["🔎", "Looking things up", "Searching the company's systems for the right data."],
-  building: ["🔧", "Building a tool", "Synapse is turning that system's code into a tool, right now."],
-  calling: ["📡", "Asking a system", "Using the new tool to fetch real data."],
-  approval: ["✋", "Needs your OK", "This would change data, so a human approves first."],
-  pruning: ["✂️", "Cleaning up", "Disconnecting tools it no longer needs."],
-  fusing: ["🧬", "Learning a shortcut", "Combining repeated steps into one safe tool."],
-  sentinel: ["🆕", "Something changed", "A developer shipped a new feature; the agent learns it."],
-  done: ["✅", "Done", "Answered, and back to zero tools."],
-  error: ["⚠️", "Something went wrong", "Try again, or watch a recorded run."],
+const NARRATE: Record<Phase, [string, string]> = {
+  offline: ["Asleep", "Pick a question to wake it."],
+  idle: ["Ready", "It holds zero tools until a question needs one."],
+  thinking: ["Thinking", "Working out which information it needs."],
+  searching: ["Looking it up", "Finding which company system knows the answer."],
+  building: ["Growing a tool", "Synapse is turning that system's code into a tool, right now."],
+  calling: ["Asking a system", "Using the new tool to fetch real data."],
+  approval: ["Needs your OK", "This would change data, so a human approves first."],
+  pruning: ["Letting go", "Disconnecting tools it no longer needs."],
+  fusing: ["Learning a shortcut", "Combining repeated steps into one safe tool."],
+  sentinel: ["Something changed", "A developer shipped a new feature; the agent picks it up."],
+  done: ["Done", "Answered, and back to zero tools."],
+  error: ["Something went wrong", "Try again, or watch a recorded run."],
 };
 
 type Props = {
-  s: ConsoleState; mode: string; busy: boolean; replaying: string | null; scenarios: ReplayMeta[];
+  s: ConsoleState; mode: string; busy: boolean; scenarios: ReplayMeta[];
   run: (sc: ReplayMeta | null, text?: string) => void;
   q: string; setQ: (v: string) => void; err: string | null; serverUp: boolean;
   warming: boolean; onPrewarm: () => void;
@@ -48,94 +45,90 @@ export function Sidebar(p: Props) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
-      <Journey step={step} />
+      <Steps step={step} />
 
       <AnimatePresence mode="wait">
         {step === 0 ? (
-          <motion.div key="pick" className="flex flex-col gap-3" initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }}>
-            <div className="relative">
-              <h2 className="font-display text-[24px] leading-tight font-semibold">Pick a <i className="text-[#ff9a6e]">question</i></h2>
-              <p className="mt-1 text-[13px] leading-snug text-muted">
-                The agent starts with <b className="text-text">no tools</b>. Watch it build exactly the ones it needs, then let them go.
+          <motion.div key="pick" className="flex flex-col gap-3" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+            <div>
+              <h2 className="font-display text-[26px] leading-[1.05] font-semibold tracking-tight">
+                What should it <i className="font-normal text-violet">figure out?</i>
+              </h2>
+              <p className="mt-2 text-[13px] leading-snug text-muted">
+                It starts with <span className="text-text underline decoration-violet decoration-2 underline-offset-2">no tools</span>.
+                Pick a case and watch it grow only the ones it needs.
               </p>
-              <motion.span aria-hidden className="pointer-events-none absolute -top-2 right-0 font-hand text-[19px] text-[#ff9a6e]"
-                animate={{ rotate: -6, y: [0, -3, 0] }} transition={{ y: { duration: 2.4, repeat: Infinity } }}>tap one ↓</motion.span>
             </div>
 
-            {p.scenarios.map((sc, i) => {
-              const f = FRIENDLY[sc.id] ?? { emoji: "💬", title: sc.title, tint: "#ff7a45", systems: [] };
-              return (
-                <motion.button key={sc.id} onClick={() => start(sc)} disabled={busy || mode === "checking"}
-                  data-cursor={mode === "replay" ? "Play" : "Run"}
-                  initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 * i }}
-                  whileHover={{ y: -3 }} whileTap={{ scale: 0.98 }}
-                  className="border-flow group relative flex w-full items-center gap-3 overflow-hidden rounded-2xl border border-white/6 bg-white/[0.035] p-3.5 text-left transition hover:bg-white/[0.07] disabled:opacity-50">
-                  <span aria-hidden className="pointer-events-none absolute -top-10 -left-10 h-28 w-28 rounded-full opacity-0 blur-2xl transition group-hover:opacity-60" style={{ background: f.tint }} />
-                  <motion.span aria-hidden className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-[24px]"
-                    style={{ background: f.tint + "22", boxShadow: `inset 0 0 0 1px ${f.tint}44` }}
-                    whileHover={{ rotate: [0, -10, 10, 0] }} transition={{ duration: 0.5 }}>{f.emoji}</motion.span>
-                  <span className="relative min-w-0 flex-1">
-                    <span className="block text-[14.5px] leading-snug font-semibold">{f.title}</span>
-                    <span className="sr-only"> ({sc.title})</span>
-                    <span className="mt-1.5 flex flex-wrap gap-1.5">
-                      {f.systems.map(([n, c]) => (
-                        <span key={n} className="flex items-center gap-1 rounded-full border border-white/8 bg-black/20 px-2 py-0.5 text-[10.5px] text-muted">
-                          <i className="h-1.5 w-1.5 rounded-full" style={{ background: c }} />{n}
-                        </span>
-                      ))}
+            <div className="flex flex-col gap-2.5">
+              {p.scenarios.map((sc, i) => {
+                const c = CASES[sc.id] ?? { title: sc.title, systems: [] };
+                return (
+                  <motion.button key={sc.id} onClick={() => start(sc)} disabled={busy || mode === "checking"} data-cursor={mode === "replay" ? "Play" : "Run"}
+                    initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07 * i }}
+                    whileHover="hover" whileTap={{ scale: 0.985 }}
+                    className="index-card group relative flex w-full items-stretch gap-0 overflow-hidden rounded-xl border border-line text-left transition-shadow hover:shadow-[4px_4px_0_var(--color-violet)] disabled:opacity-50">
+                    <span className="flex w-[39px] shrink-0 items-start justify-center pt-3 font-mono text-[11px] text-violet">{String(i + 1).padStart(2, "0")}</span>
+                    <span className="min-w-0 flex-1 py-3 pr-3 pl-3">
+                      <span className="block font-display text-[16.5px] leading-snug font-semibold">{c.title}</span>
+                      <span className="sr-only"> ({sc.title})</span>
+                      <span className="mt-1 line-clamp-2 block text-[12px] leading-snug text-muted italic">&ldquo;{sc.question}&rdquo;</span>
+                      <span className="mt-2 block font-mono text-[10px] tracking-[0.14em] text-muted uppercase">
+                        touches {c.systems.join(" · ")}
+                      </span>
                     </span>
-                  </span>
-                  <span aria-hidden className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[13px] text-black shadow-[0_0_0_0_rgba(255,255,255,.5)] transition group-hover:scale-110 group-hover:shadow-[0_0_0_6px_rgba(255,255,255,.08)]">▶</span>
-                </motion.button>
-              );
-            })}
+                    <span aria-hidden className="flex w-12 shrink-0 items-center justify-center border-l border-dashed border-line">
+                      <motion.svg width="20" height="20" viewBox="0 0 20 20" className="text-text" variants={{ hover: { x: 3 } }}>
+                        <circle cx="10" cy="10" r="9" fill="none" stroke="currentColor" strokeWidth="1.3" opacity=".35" />
+                        <path d="M8 6.5 L13 10 L8 13.5 Z" fill="currentColor" />
+                      </motion.svg>
+                    </span>
+                  </motion.button>
+                );
+              })}
+            </div>
 
             {mode === "live" ? (
               <Composer q={p.q} setQ={p.setQ} busy={busy} serverUp={p.serverUp} err={p.err} onAsk={() => start(null, p.q)} warming={p.warming} onPrewarm={p.onPrewarm} />
             ) : (
-              <p className="flex items-start gap-2 rounded-xl bg-black/20 px-3 py-2.5 text-[12px] leading-relaxed text-muted">
-                <span aria-hidden>🎬</span>
-                <span>These are <b className="text-text">real recorded runs</b>, replayed. Switch to <b className="text-text">Live</b> (top right) to ask your own.</span>
+              <p className="border-l-2 border-line pl-3 text-[12px] leading-relaxed text-muted">
+                These are real runs, recorded and replayed. Switch to <b className="font-semibold text-text">Live</b> at the top to ask your own.
               </p>
             )}
           </motion.div>
         ) : (
-          <motion.div key="run" className="flex min-h-0 flex-1 flex-col gap-3" initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }}>
-            {/* the question, as a chat bubble */}
-            <div className="flex justify-end">
-              <motion.div initial={{ opacity: 0, y: 10, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-                className="max-w-[88%] rounded-2xl rounded-br-md bg-[#ff7a45] px-3.5 py-2.5 text-[13px] leading-snug font-medium text-[#1a0d06] shadow-[0_8px_30px_rgba(255,122,69,.25)]">
-                {s.question}
-              </motion.div>
-            </div>
+          <motion.div key="run" className="flex flex-col gap-4" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+            <figure className="relative pl-7">
+              <span className="absolute top-0 left-0 font-display text-[22px] leading-none font-semibold text-violet italic">Q.</span>
+              <blockquote className="font-display text-[16px] leading-snug text-text italic">{s.question}</blockquote>
+            </figure>
 
-            {step === 1 ? <Narrator phase={s.phase} detail={s.status} /> : <Recap s={s} />}
+            {step === 1 ? <Now phase={s.phase} detail={s.status} beat={s.lines.length} /> : <Report s={s} />}
 
             <AnswerCard s={s} />
 
             {step === 2 && (
-              <motion.button initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={() => setPicking(true)}
-                className="rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black shadow-[0_10px_30px_rgba(255,255,255,.12)]">
-                ↺ Try another question
+              <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} whileTap={{ scale: 0.97 }}
+                onClick={() => setPicking(true)}
+                className="group flex items-center justify-center gap-2 rounded-full border border-text bg-text px-4 py-2.5 text-sm font-semibold text-ink transition hover:bg-transparent hover:text-text">
+                Try another case <span aria-hidden className="transition group-hover:translate-x-1">→</span>
               </motion.button>
             )}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* the technical log, for the curious */}
-      <div className="mt-auto rounded-2xl border border-white/6 bg-black/25">
+      <div className="mt-auto border-t border-dashed border-line pt-2">
         <button onClick={() => setShowLog((v) => !v)} aria-expanded={showLog}
-          className="flex w-full items-center justify-between px-3.5 py-2.5 text-left text-[12.5px] text-muted transition hover:text-text">
-          <span className="flex items-center gap-2"><span aria-hidden>🧾</span> Under the hood <span className="font-mono text-[10.5px] text-muted/80">({s.lines.length} events)</span></span>
-          <motion.span aria-hidden animate={{ rotate: showLog ? 180 : 0 }}>▾</motion.span>
+          className="flex w-full items-center justify-between py-1.5 text-left font-mono text-[11px] tracking-wider text-muted uppercase transition hover:text-text">
+          <span>Raw log · {s.lines.length} events</span>
+          <span aria-hidden>{showLog ? "hide −" : "show +"}</span>
         </button>
         <AnimatePresence initial={false}>
           {showLog && (
             <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden">
-              <div className="max-h-[220px] overflow-y-auto px-3.5 pb-3">
-                {s.lines.length ? <Timeline lines={s.lines} /> : <p className="font-mono text-xs text-muted">Nothing yet. Every Synapse build, call and prune shows up here.</p>}
+              <div className="max-h-[220px] overflow-y-auto pb-2">
+                {s.lines.length ? <Timeline lines={s.lines} /> : <p className="font-mono text-xs text-muted">Every Synapse build, call and prune lands here.</p>}
               </div>
             </motion.div>
           )}
@@ -145,79 +138,105 @@ export function Sidebar(p: Props) {
   );
 }
 
-function Journey({ step }: { step: number }) {
-  const steps = ["Ask", "Watch it grow", "Answer"];
+/** Three tabs with an ink underline that slides to the current step. */
+function Steps({ step }: { step: number }) {
+  const steps = ["Ask", "Watch", "Answer"];
   return (
-    <ol className="relative flex items-start justify-between px-2" aria-label="Progress">
-      <div aria-hidden className="absolute top-[15px] right-8 left-8 h-[2px] rounded bg-white/8" />
-      <motion.div aria-hidden className="absolute top-[15px] left-8 h-[2px] origin-left rounded bg-gradient-to-r from-[#ff7a45] to-[#8fd18a]"
-        style={{ right: 32 }} animate={{ scaleX: step / 2 }} transition={{ type: "spring", stiffness: 120, damping: 20 }} />
-      {steps.map((l, i) => {
-        const state = i < step ? "done" : i === step ? "now" : "next";
-        return (
-          <li key={l} aria-current={state === "now" ? "step" : undefined} className="relative z-10 flex w-20 flex-col items-center gap-1.5">
-            <motion.span className="flex h-8 w-8 items-center justify-center rounded-full border-2 font-mono text-[12px] font-bold"
-              animate={{
-                backgroundColor: state === "done" ? "#8fd18a" : state === "now" ? "#ff7a45" : "#1a1612",
-                borderColor: state === "next" ? "#3a322a" : "rgba(0,0,0,0)",
-                color: state === "next" ? "#a39887" : "#120f0b",
-                scale: state === "now" ? 1.12 : 1,
-              }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
-              {state === "done" ? "✓" : i + 1}
-            </motion.span>
-            {state === "now" && (
-              <motion.span aria-hidden className="absolute top-0 h-8 w-8 rounded-full border-2 border-[#ff7a45]"
-                animate={{ scale: [1, 1.7], opacity: [0.7, 0] }} transition={{ duration: 1.6, repeat: Infinity }} />
-            )}
-            <span className={`text-center text-[11px] leading-tight ${state === "next" ? "text-muted" : "font-semibold text-text"}`}>{l}</span>
-          </li>
-        );
-      })}
+    <ol className="grid grid-cols-3 border-b border-line" aria-label="Progress">
+      {steps.map((l, i) => (
+        <li key={l} aria-current={i === step ? "step" : undefined} className="relative pb-2.5">
+          <span className={`flex items-baseline gap-1.5 text-[13px] transition-colors ${i === step ? "text-text" : i < step ? "text-muted" : "text-muted/60"}`}>
+            <span className="font-mono text-[10px]">{i < step ? "✓" : `0${i + 1}`}</span>
+            <span className={i === step ? "font-display font-semibold" : ""}>{l}</span>
+          </span>
+          {i === step && <motion.span layoutId="step-ink" className="absolute right-3 -bottom-px left-0 h-[2.5px] rounded-full bg-violet"
+            transition={{ type: "spring", stiffness: 380, damping: 30 }} />}
+        </li>
+      ))}
     </ol>
   );
 }
 
-function Narrator({ phase, detail }: { phase: Phase; detail: string }) {
-  const [emoji, title, body] = NARRATE[phase] ?? NARRATE.thinking;
+/** Live narration with an "action potential" trace that spikes on every agent event. */
+function Now({ phase, detail, beat }: { phase: Phase; detail: string; beat: number }) {
+  const [title, body] = NARRATE[phase] ?? NARRATE.thinking;
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-[#ff7a45]/25 bg-gradient-to-br from-[#ff7a45]/12 to-transparent p-4" aria-live="polite">
-      <p className="mb-2 font-mono text-[10px] tracking-[0.25em] text-[#ff9a6e] uppercase">Right now</p>
-      <AnimatePresence mode="wait">
-        <motion.div key={phase} className="flex items-start gap-3"
-          initial={{ opacity: 0, y: 10, filter: "blur(4px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}>
-          <motion.span aria-hidden className="text-[30px] leading-none" animate={{ rotate: [0, -8, 8, 0], scale: [1, 1.1, 1] }} transition={{ duration: 1.4, repeat: Infinity }}>{emoji}</motion.span>
-          <div className="min-w-0">
-            <p className="font-display text-[19px] leading-tight font-semibold">{title}</p>
-            <p className="mt-0.5 text-[12.5px] leading-snug text-text/75">{body}</p>
-          </div>
-        </motion.div>
-      </AnimatePresence>
-      <p className="mt-3 truncate font-mono text-[10.5px] text-muted">{detail}</p>
-      <span aria-hidden className="shimmer absolute inset-x-0 bottom-0 h-[2px]" />
+    <div className="overflow-hidden rounded-xl border border-line bg-[var(--well)]" aria-live="polite">
+      <div className="flex items-center justify-between px-3.5 pt-3">
+        <span className="flex items-center gap-2 font-mono text-[10px] tracking-[0.22em] text-violet uppercase">
+          <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet opacity-75" /><span className="relative h-1.5 w-1.5 rounded-full bg-violet" /></span>
+          live
+        </span>
+        <span className="font-mono text-[10px] text-muted">{beat} events</span>
+      </div>
+      <Trace beat={beat} />
+      <div className="px-3.5 pb-3.5">
+        <AnimatePresence mode="wait">
+          <motion.div key={phase} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.22 }}>
+            <p className="font-display text-[21px] leading-tight font-semibold">{title}</p>
+            <p className="mt-0.5 text-[12.5px] leading-snug text-muted">{body}</p>
+          </motion.div>
+        </AnimatePresence>
+        <p className="mt-2 truncate font-mono text-[10.5px] text-muted/80">{detail}</p>
+      </div>
     </div>
   );
 }
 
-function Recap({ s }: { s: ConsoleState }) {
-  const items: [string, string, string][] = [
-    ["🔧", `${s.stats.builds || s.stats.grafts}`, s.stats.builds ? "tools built by Synapse" : "systems connected"],
-    ["📡", `${s.stats.calls}`, "questions asked to systems"],
-    ["✂️", `${s.live.length}`, "tools still connected"],
+/** A scrolling membrane-potential trace: quiet noise, with a spike each time `beat` changes. */
+function Trace({ beat }: { beat: number }) {
+  const path = useRef<SVGPathElement>(null);
+  const kick = useRef(0);
+  useEffect(() => { kick.current = 1; }, [beat]);
+  useEffect(() => {
+    const N = 90, W = 360, H = 56, buf = new Array(N).fill(0);
+    let raf = 0, t = 0, phase = 0, last = 0;
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const tick = (now: number) => {
+      raf = requestAnimationFrame(tick);
+      if (now - last < 33) return; // ~30 fps
+      last = now; t += 1;
+      let v = Math.sin(t * 0.21) * 0.05 + (Math.random() - 0.5) * 0.06;
+      if (kick.current > 0 && phase === 0) { phase = 1; kick.current = 0; }
+      if (phase) {   // depolarise, overshoot, recover
+        const shape = [0.25, 0.9, 1, 0.4, -0.35, -0.25, -0.12, -0.05];
+        v += shape[phase - 1] ?? 0;
+        phase = phase >= shape.length ? 0 : phase + 1;
+      }
+      buf.shift(); buf.push(v);
+      const d = buf.map((y, i) => `${i ? "L" : "M"}${(i / (N - 1)) * W} ${H / 2 - y * (H * 0.42)}`).join(" ");
+      path.current?.setAttribute("d", d);
+    };
+    if (!reduce) raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  return (
+    <svg viewBox="0 0 360 56" preserveAspectRatio="none" className="mt-1 block h-14 w-full text-violet" aria-hidden>
+      <line x1="0" y1="28" x2="360" y2="28" stroke="currentColor" strokeOpacity=".12" strokeDasharray="2 4" />
+      <path ref={path} d="M0 28 L360 28" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"
+        style={{ filter: "drop-shadow(0 0 4px currentColor)" }} />
+    </svg>
+  );
+}
+
+function Report({ s }: { s: ConsoleState }) {
+  const items: [number, string][] = [
+    [s.stats.grafts, "systems connected"],
+    [s.stats.calls, "calls made"],
+    [s.live.length, "tools kept"],
   ];
   return (
-    <div className="rounded-2xl border border-[#8fd18a]/25 bg-gradient-to-br from-[#8fd18a]/10 to-transparent p-4">
-      <p className="mb-3 font-mono text-[10px] tracking-[0.25em] text-[#8fd18a] uppercase">What just happened</p>
-      <div className="grid grid-cols-3 gap-2">
-        {items.map(([e, n, l], i) => (
-          <motion.div key={l} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 * i }}
-            className="rounded-xl bg-black/20 p-2.5 text-center">
-            <p aria-hidden className="text-lg">{e}</p>
-            <p className="font-display text-2xl font-bold">{n}</p>
-            <p className="text-[10.5px] leading-tight text-muted">{l}</p>
+    <div className="rounded-xl border border-line bg-[var(--well)] p-3.5">
+      <p className="font-mono text-[10px] tracking-[0.22em] text-live uppercase">Lab report</p>
+      <div className="mt-2 grid grid-cols-3 divide-x divide-dashed divide-line">
+        {items.map(([n, l], i) => (
+          <motion.div key={l} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 * i }} className="px-2 first:pl-0">
+            <p className="font-display text-[30px] leading-none font-semibold">{n}</p>
+            <p className="mt-1 text-[11px] leading-tight text-muted">{l}</p>
           </motion.div>
         ))}
       </div>
-      <p className="mt-3 font-hand text-[18px] leading-snug text-text/80">grew what it needed, used it, then let it all go. 🌿</p>
+      <p className="mt-3 font-hand text-[19px] leading-snug text-text/85">grew what it needed, used it, then let it all go.</p>
     </div>
   );
 }
@@ -225,15 +244,15 @@ function Recap({ s }: { s: ConsoleState }) {
 function Composer({ q, setQ, busy, serverUp, err, onAsk, warming, onPrewarm }:
   { q: string; setQ: (v: string) => void; busy: boolean; serverUp: boolean; err: string | null; onAsk: () => void; warming: boolean; onPrewarm: () => void }) {
   return (
-    <div className="rounded-2xl border border-white/8 bg-black/25 p-3 transition focus-within:border-[#ff7a45]/50 focus-within:shadow-[0_0_0_4px_rgba(255,122,69,.12)]">
-      <label className="mb-1 block text-[11px] text-muted" htmlFor="ask">…or ask your own</label>
+    <div className="index-card rounded-xl border border-line p-3 pl-12 transition focus-within:border-violet focus-within:shadow-[4px_4px_0_var(--color-violet)]">
+      <label className="mb-1 block font-mono text-[10px] tracking-[0.18em] text-muted uppercase" htmlFor="ask">or write your own</label>
       <textarea id="ask" value={q} onChange={(e) => setQ(e.target.value)} rows={2}
         onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) onAsk(); }}
-        className="w-full resize-none bg-transparent text-[14px] leading-relaxed text-text outline-none placeholder:text-muted"
-        placeholder="e.g. Which orders to Mumbai are delayed?" />
+        className="w-full resize-none bg-transparent font-display text-[15px] leading-[22px] text-text italic outline-none placeholder:text-muted"
+        placeholder="Which orders to Mumbai are delayed?" />
       <div className="mt-2 flex items-center gap-2">
-        <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.96 }} onClick={onAsk} disabled={busy || !serverUp || !q.trim()}
-          className="rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-black disabled:opacity-40">Ask agent</motion.button>
+        <motion.button whileTap={{ scale: 0.96 }} onClick={onAsk} disabled={busy || !serverUp || !q.trim()}
+          className="rounded-full bg-text px-4 py-1.5 text-sm font-semibold text-ink disabled:opacity-40">Ask</motion.button>
         <button onClick={onPrewarm} disabled={warming || !serverUp} title="Builds every read-only tool up front so the first answer is faster"
           className="rounded-full border border-line px-3 py-1.5 text-xs text-muted transition hover:text-text disabled:opacity-40">{warming ? "Warming up…" : "Warm up"}</button>
         <span className="ml-auto font-mono text-[10px] text-muted">Ctrl ⏎</span>

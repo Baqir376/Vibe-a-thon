@@ -21,7 +21,7 @@ export function Ambient() {
       <div className="absolute inset-x-[-20%] top-[55%] h-[80vh]">
         <div className="grid-floor h-full w-full" />
       </div>
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,rgba(8,6,4,.75)_100%)]" />
+      <div className="vignette absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,rgba(8,6,4,.75)_100%)]" />
       <motion.div className="absolute inset-0" style={{ background: spot }} />
     </div>
   );

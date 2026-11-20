@@ -117,7 +117,7 @@ synaptogenesis/
   synapse_cli.py   drives the Synapse CLI non-interactively, parses its MCP snippet / endpoint table
   atlas.py         Capability Atlas: Synapse scan -> searchable endpoint index
   graft.py         just-in-time grafting: build -> attach MCP session -> prune
-  agent.py         Claude tool-use loop whose tool list grows and shrinks
+  agent.py         LLM tool-use loop (Groq / OpenRouter / Gemini) whose tool list grows and shrinks
   events.py        JSONL event stream (.synapto/events.jsonl) for the neural-map UI + benchmark
 services/          the four legacy apps (unchanged by Synapse)
 systems.yaml       registry of systems; policy.yaml: least-privilege rules

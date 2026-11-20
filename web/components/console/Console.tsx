@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { LogoMark, Wordmark } from "@/components/Logo";
 import { ask, listReplays, prewarm, type ReplayMeta } from "@/lib/api";
 import { useConsole } from "@/lib/useConsole";
+import { useTheme } from "@/lib/useTheme";
 import { InkField } from "@/components/InkField";
 import { LaunchReveal } from "@/components/fx/Launch";
 import { Ambient } from "./Ambient";
@@ -26,6 +27,7 @@ const FALLBACK: ReplayMeta[] = [
 
 export function Console() {
   const c = useConsole();
+  const { light, toggle } = useTheme();
   const { s, mode } = c;
   const [scenarios, setScenarios] = useState<ReplayMeta[]>(FALLBACK);
   const [q, setQ] = useState("");
@@ -65,7 +67,7 @@ export function Console() {
   };
 
   return (
-    <div className="relative flex h-screen flex-col gap-3 overflow-hidden p-3">
+    <div data-theme={light ? "light" : "dark"} className="app-shell relative flex h-screen flex-col gap-3 overflow-hidden bg-ink p-3 text-text">
       <Ambient />
       <LaunchReveal />
       <motion.header initial={{ y: -30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5 }}
@@ -77,6 +79,7 @@ export function Console() {
         </div>
         <div className="flex items-center gap-3">
           <ModeSwitch mode={mode} serverUp={c.serverUp} onChange={c.setMode} />
+          <ThemeToggle light={light} onToggle={toggle} />
           <button onClick={() => setOnboard(true)} data-cursor="Help" aria-label="How it works"
             className="flex h-8 w-8 items-center justify-center rounded-full border border-line text-sm text-muted transition hover:text-text">?</button>
         </div>
@@ -86,16 +89,16 @@ export function Console() {
         <motion.section initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8, delay: 0.15 }}
           className="glass-pro relative min-h-0 overflow-hidden rounded-[22px]">
           <div className="dot-grid pointer-events-none absolute inset-0 opacity-60" />
-          <InkField tone="night" className="pointer-events-none opacity-70" />
+          <InkField key={light ? "l" : "d"} tone={light ? "paper" : "night"} className="pointer-events-none opacity-70" />
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(232,85,31,.12),transparent_65%)]" />
-          <div className="absolute inset-0 p-4"><NeuralMap s={s} onPulseDone={onPulseDone} /></div>
+          <div className="absolute inset-0 p-4"><NeuralMap s={s} onPulseDone={onPulseDone} light={light} /></div>
           <MapNote show={!s.question && !busy && s.systems.length > 0} />
           <DoneStamp show={s.phase === "done"} tools={s.live.length} peak={s.stats.peak} />
           <p aria-hidden className="pointer-events-none absolute right-6 bottom-12 font-mono text-[10.5px] tracking-wider text-muted/80"><b className="text-text/70">Fig. 3</b> · the agent&apos;s nervous system, live</p>
           <div className="pointer-events-none absolute top-5 left-6"><LiveCounter live={s.live.length} total={s.caps.length || 0} /></div>
           <div className="absolute bottom-5 left-6"><Stats stats={s.stats} /></div>
           <div className="absolute right-5 bottom-5 flex flex-wrap justify-end gap-4 text-[11px] text-muted">
-            {[["#7d95ff", "read"], ["#f2c14e", "writes"], ["#8fd18a", "grafted"], ["#5a5043", "dormant"], ["#ffd166", "new"], ["#ff7a45", "fused"]].map(([col, l]) => (
+            {[["var(--color-read)", "read"], ["var(--color-write)", "writes"], ["var(--color-live)", "grafted"], ["var(--color-muted)", "dormant"], ["var(--color-drift)", "new"], ["var(--color-violet)", "fused"]].map(([col, l]) => (
               <span key={l} className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full" style={{ background: col }} />{l}</span>
             ))}
           </div>
@@ -110,8 +113,8 @@ export function Console() {
         </motion.section>
 
         <motion.aside initial={{ x: 40, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ duration: 0.6, delay: 0.25 }}
-          className="glass-pro flex min-h-0 flex-col gap-3 overflow-y-auto rounded-[22px] p-4">
-          <Sidebar s={s} mode={mode} busy={busy} replaying={c.replaying} scenarios={scenarios} run={run} q={q} setQ={setQ} err={err}
+          className="glass-pro flex min-h-0 flex-col gap-3 overflow-x-hidden overflow-y-auto rounded-[22px] p-4">
+          <Sidebar s={s} mode={mode} busy={busy} scenarios={scenarios} run={run} q={q} setQ={setQ} err={err}
             serverUp={c.serverUp} warming={warming} onPrewarm={async () => { setWarming(true); await prewarm(); setWarming(false); }} />
         </motion.aside>
       </div>
@@ -130,8 +133,8 @@ function ModeSwitch({ mode, serverUp, onChange }: { mode: string; serverUp: bool
     <div className="relative flex rounded-full border border-line bg-ink/70 p-0.5 text-xs">
       {opts.map(([m, label]) => (
         <button key={m} onClick={() => onChange(m)} title={m === "live" && !serverUp ? "Agent server offline: start python -m synaptogenesis web" : ""}
-          className={`relative z-10 flex items-center gap-1.5 rounded-full px-3 py-1 transition ${mode === m ? "text-black" : "text-muted hover:text-text"}`}>
-          {mode === m && <motion.span layoutId="mode-pill" className="absolute inset-0 -z-10 rounded-full bg-white" transition={{ type: "spring", stiffness: 400, damping: 32 }} />}
+          className={`relative z-10 flex items-center gap-1.5 rounded-full px-3 py-1 transition ${mode === m ? "text-ink" : "text-muted hover:text-text"}`}>
+          {mode === m && <motion.span layoutId="mode-pill" className="absolute inset-0 -z-10 rounded-full bg-text" transition={{ type: "spring", stiffness: 400, damping: 32 }} />}
           {m === "live" && <span className={`h-1.5 w-1.5 rounded-full ${serverUp ? "bg-emerald-500" : "bg-danger"}`} />}
           {label}
         </button>
@@ -172,11 +175,32 @@ function ReplayApproval({ approvals }: { approvals: { id: number; kind: string; 
           <div className="mt-4 flex justify-end gap-2 text-sm">
             <span className="rounded-full border border-line px-4 py-1.5 text-muted">Decline</span>
             <motion.span initial={{ scale: 1 }} animate={{ scale: [1, 1, 0.92, 1] }} transition={{ duration: 1.4, times: [0, 0.7, 0.85, 1] }}
-              className="rounded-full bg-write px-4 py-1.5 font-semibold text-[#2a1800]">Approve</motion.span>
+              className="rounded-full bg-write px-4 py-1.5 font-semibold text-ink">Approve</motion.span>
           </div>
           <p className="mt-3 text-[11px] text-muted">Replay: a human approved this during the recorded run.</p>
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+/** Sun / moon: the moon's bite slides away and rays spring out. */
+function ThemeToggle({ light, onToggle }: { light: boolean; onToggle: () => void }) {
+  return (
+    <button onClick={onToggle} aria-label={light ? "Switch to dark theme" : "Switch to light theme"} data-cursor={light ? "Night" : "Day"}
+      className="flex h-8 w-8 items-center justify-center rounded-full border border-line text-text transition hover:border-violet">
+      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
+        <mask id="moon-bite"><rect width="24" height="24" fill="#fff" />
+          <motion.circle r="7" fill="#000" initial={false} animate={{ cx: light ? 30 : 17, cy: light ? -4 : 7 }} transition={{ type: "spring", stiffness: 260, damping: 22 }} /></mask>
+        <motion.circle cx="12" cy="12" fill="currentColor" mask="url(#moon-bite)" initial={false} animate={{ r: light ? 4.5 : 8 }} transition={{ type: "spring", stiffness: 260, damping: 20 }} />
+        <motion.g stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ transformOrigin: "12px 12px" }} initial={false}
+          animate={{ opacity: light ? 1 : 0, rotate: light ? 0 : -45, scale: light ? 1 : 0.5 }} transition={{ duration: 0.35 }}>
+          {[0, 45, 90, 135, 180, 225, 270, 315].map((a) => {
+            const r = (a * Math.PI) / 180;
+            return <line key={a} x1={12 + Math.cos(r) * 7.5} y1={12 + Math.sin(r) * 7.5} x2={12 + Math.cos(r) * 10} y2={12 + Math.sin(r) * 10} />;
+          })}
+        </motion.g>
+      </svg>
+    </button>
   );
 }

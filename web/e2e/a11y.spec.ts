@@ -31,7 +31,18 @@ test("app has no serious accessibility violations", async ({ page }) => {
   await freshVisit(page);
   await agentOffline(page);
   await page.goto("/app");
-  await expect(page.getByRole("heading", { name: "Pick a question" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /What should it figure out/ })).toBeVisible();
+  await settle(page).catch(() => {});
+  expect(await audit(page)).toEqual([]);
+});
+
+test("app in the light theme has no serious accessibility violations", async ({ page }) => {
+  await freshVisit(page);
+  await agentOffline(page);
+  await page.addInitScript(() => { try { localStorage.setItem("synapto-theme", "light"); } catch { /* ignore */ } });
+  await page.goto("/app");
+  await expect(page.getByRole("heading", { name: /What should it figure out/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Switch to dark theme" })).toBeVisible();
   await settle(page).catch(() => {});
   expect(await audit(page)).toEqual([]);
 });

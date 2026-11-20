@@ -9,6 +9,11 @@ const W = 1000, H = 720, C = { x: W / 2, y: H / 2 + 10 };
 const ANGLE: Record<string, number> = { orders: -148, inventory: -32, tickets: 32, roster: 148, tickets_fused: 90 };
 const RX = 300, RY = 225, REP = 112;
 
+const DARK = { sysA: "#2a241c", sysB: "#15120e", dend: "#4a3f33", stub: "#2a251e", live: "#8fd18a", write: "#f2c14e", read: "#7d95ff",
+  dormant: "#5a5043", flow: "#fff1e4", fresh: "#ffd166", label: "#f1eadc", muted: "#a39887", sysStroke: "#4a4033", pulse: "#fff" };
+const LIGHT: typeof DARK = { sysA: "#fffdf8", sysB: "#efe6d4", dend: "#b5a68c", stub: "#ddd3c0", live: "#2b8a45", write: "#b07d12", read: "#2346d8",
+  dormant: "#a89b85", flow: "#ffffff", fresh: "#b07d12", label: "#16130f", muted: "#625a4e", sysStroke: "#c9bca5", pulse: "#e8551f" };
+
 type EP = { k: string; cap: Capability; x: number; y: number; ang: number; sys: string };
 
 function layout(systems: System[], caps: Capability[]) {
@@ -33,7 +38,8 @@ function layout(systems: System[], caps: Capability[]) {
 
 const linkD = (sx: number, sy: number, ex: number, ey: number) => `M ${C.x} ${C.y} Q ${sx} ${sy} ${ex} ${ey}`;
 
-export function NeuralMap({ s, onPulseDone }: { s: ConsoleState; onPulseDone: (id: number) => void }) {
+export function NeuralMap({ s, onPulseDone, light = false }: { s: ConsoleState; onPulseDone: (id: number) => void; light?: boolean }) {
+  const P = light ? LIGHT : DARK;
   const { pos, eps } = useMemo(() => layout(s.systems, s.caps), [s.systems, s.caps]);
   const [hoverSys, setHoverSys] = useState<string | null>(null);
   const linked = eps.filter((e) => s.live.includes(e.k) || s.dormant.includes(e.k));
@@ -42,51 +48,51 @@ export function NeuralMap({ s, onPulseDone }: { s: ConsoleState; onPulseDone: (i
     <svg viewBox={`-90 -10 ${W + 180} ${H + 20}`} className="h-full w-full select-none" preserveAspectRatio="xMidYMid meet">
       <defs>
         <radialGradient id="core"><stop offset="0%" stopColor="#ffb089" /><stop offset="55%" stopColor="#e8551f" /><stop offset="100%" stopColor="#4a1806" /></radialGradient>
-        <radialGradient id="sys"><stop offset="0%" stopColor="#2a241c" /><stop offset="100%" stopColor="#15120e" /></radialGradient>
+        <radialGradient id="sys"><stop offset="0%" stopColor={P.sysA} /><stop offset="100%" stopColor={P.sysB} /></radialGradient>
         <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
       </defs>
 
       {/* dendrites */}
       {s.systems.map((sys) => pos[sys.name] && (
-        <motion.path key={sys.name} d={dendrite(pos[sys.name].x, pos[sys.name].y)} fill="none" stroke="#4a3f33" strokeWidth={1.6} strokeLinecap="round"
+        <motion.path key={sys.name} d={dendrite(pos[sys.name].x, pos[sys.name].y)} fill="none" stroke={P.dend} strokeWidth={1.6} strokeLinecap="round"
           initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }} />
       ))}
       {eps.map((e) => (
-        <line key={"d" + e.k} x1={pos[e.sys].x} y1={pos[e.sys].y} x2={e.x} y2={e.y} stroke="#2a251e" />
+        <line key={"d" + e.k} x1={pos[e.sys].x} y1={pos[e.sys].y} x2={e.x} y2={e.y} stroke={P.stub} />
       ))}
 
       {/* grafted (live) and dormant links */}
       {linked.map((e) => {
         const live = s.live.includes(e.k);
-        const color = e.sys.endsWith("_fused") ? "#ff7a45" : e.cap.mutating ? "#f2c14e" : "#8fd18a";
+        const color = e.sys.endsWith("_fused") ? "#ff7a45" : e.cap.mutating ? P.write : P.live;
         const d = linkD(pos[e.sys].x, pos[e.sys].y, e.x, e.y);
         return (
           <g key={"l" + e.k}>
             {/* solid stroke draws itself in; pathLength owns its dasharray */}
             <motion.path id={"path-" + e.k} d={d} fill="none"
               initial={{ pathLength: 0, opacity: 0 }}
-              animate={{ pathLength: 1, opacity: live ? 0.95 : 0.3, stroke: live ? color : "#5a5043", strokeWidth: live ? 2.4 : 1.2 }}
+              animate={{ pathLength: 1, opacity: live ? 0.95 : 0.3, stroke: live ? color : P.dormant, strokeWidth: live ? 2.4 : 1.2 }}
               transition={{ pathLength: { duration: 0.9, ease: [0.22, 1, 0.36, 1] }, default: { duration: 0.5 } }}
               filter={live ? "url(#glow)" : undefined} />
             {/* dashed overlay: flowing signal when live, dotted when dormant */}
             <motion.path d={d} fill="none" strokeDasharray={live ? "5 11" : "3 7"} className={live ? "link-flow" : ""}
-              initial={{ opacity: 0 }} animate={{ opacity: 1, stroke: live ? "#fff1e4" : "#5a5043", strokeWidth: live ? 2.2 : 1.2 }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1, stroke: live ? P.flow : P.dormant, strokeWidth: live ? 2.2 : 1.2 }}
               transition={{ duration: 0.4, delay: live ? 0.7 : 0 }} />
           </g>
         );
       })}
 
       {/* a spark burst each time an endpoint is grafted */}
-      {eps.filter((e) => s.live.includes(e.k)).map((e) => <Spark key={"s" + e.k} x={e.x} y={e.y} color={e.sys.endsWith("_fused") ? "#ff7a45" : e.cap.mutating ? "#f2c14e" : "#8fd18a"} />)}
+      {eps.filter((e) => s.live.includes(e.k)).map((e) => <Spark key={"s" + e.k} x={e.x} y={e.y} color={e.sys.endsWith("_fused") ? "#ff7a45" : e.cap.mutating ? P.write : P.live} />)}
 
       {/* signal pulses for tool calls */}
-      {s.pulses.map((p) => <PulseDot key={p.id} id={p.id} pathId={"path-" + p.key} onDone={onPulseDone} />)}
+      {s.pulses.map((p) => <PulseDot key={p.id} id={p.id} pathId={"path-" + p.key} onDone={onPulseDone} color={P.pulse} />)}
 
       {/* endpoints */}
       {eps.map((e) => {
         const live = s.live.includes(e.k), dormant = s.dormant.includes(e.k), fresh = s.fresh.includes(e.k);
         const fused = e.sys.endsWith("_fused");
-        const base = fused ? "#ff7a45" : e.cap.mutating ? "#f2c14e" : "#7d95ff";
+        const base = fused ? "#ff7a45" : e.cap.mutating ? P.write : P.read;
         const showLabel = live || fresh || fused || hoverSys === e.sys;
         const right = Math.cos((e.ang * Math.PI) / 180) >= 0;
         return (
@@ -94,22 +100,22 @@ export function NeuralMap({ s, onPulseDone }: { s: ConsoleState; onPulseDone: (i
             <motion.circle cx={e.x} cy={e.y}
               initial={fresh ? { r: 0 } : false}
               animate={{ r: live ? 7.5 : fresh ? 8 : fused ? 7 : 5,
-                         fill: live ? (fused ? "#ff7a45" : e.cap.mutating ? "#f2c14e" : "#8fd18a") : dormant ? "rgba(0,0,0,0)" : fresh ? "#ffd166" : base,
+                         fill: live ? (fused ? "#ff7a45" : e.cap.mutating ? P.write : P.live) : dormant ? "rgba(0,0,0,0)" : fresh ? P.fresh : base,
                          opacity: live || fresh || fused ? 1 : dormant ? 0.9 : 0.32,
-                         stroke: dormant && !live ? "#5a5043" : "rgba(0,0,0,0)" }}
+                         stroke: dormant && !live ? P.dormant : "rgba(0,0,0,0)" }}
               strokeWidth={1.6} transition={{ type: "spring", stiffness: 260, damping: 16 }}
               filter={live || fresh ? "url(#glow)" : undefined}>
               <title>{`${e.sys} · ${e.cap.spec}\n${e.cap.description}`}</title>
             </motion.circle>
             {fresh && (
-              <motion.circle cx={e.x} cy={e.y} r={8} fill="none" stroke="#ffd166"
+              <motion.circle cx={e.x} cy={e.y} r={8} fill="none" stroke={P.fresh}
                 animate={{ r: [8, 26], opacity: [0.9, 0] }} transition={{ duration: 1.6, repeat: Infinity }} />
             )}
             <AnimatePresence>
               {showLabel && (
                 <motion.text initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   x={e.x + (right ? 12 : -12)} y={e.y + 3.5} textAnchor={right ? "start" : "end"}
-                  className="font-mono text-[10.5px]" fill={fresh ? "#ffd166" : live ? "#f1eadc" : "#a39887"}>
+                  className="font-mono text-[10.5px]" fill={fresh ? P.fresh : live ? P.label : P.muted}>
                   {e.cap.spec.replace(/\{[^}]+\}/g, "{…}")}
                 </motion.text>
               )}
@@ -133,10 +139,10 @@ export function NeuralMap({ s, onPulseDone }: { s: ConsoleState; onPulseDone: (i
             ))}
             <motion.circle cx={p.x} cy={p.y} r={38} fill="url(#sys)"
               initial={fused ? { scale: 0 } : false}
-              animate={{ stroke: building ? "#ff7a45" : active ? "#8fd18a" : fused ? "#e8551f" : "#4a4033", scale: 1 }}
+              animate={{ stroke: building ? "#ff7a45" : active ? P.live : fused ? "#e8551f" : P.sysStroke, scale: 1 }}
               strokeWidth={1.8} style={{ transformOrigin: `${p.x}px ${p.y}px` }} transition={{ type: "spring", stiffness: 200, damping: 14 }} />
             <text x={p.x} y={p.y + 1} textAnchor="middle" className="fill-text font-sans text-[14px] font-semibold">{sys.name.replace("_fused", "")}</text>
-            <text x={p.x} y={p.y + 16} textAnchor="middle" className="font-mono text-[9.5px]" fill={fused ? "#ffb089" : "#a39887"}>
+            <text x={p.x} y={p.y + 16} textAnchor="middle" className="font-mono text-[9.5px]" fill={fused ? (light ? "#b23c14" : "#ffb089") : P.muted}>
               {sys.mode === "hosted" ? "synapse hosted" : fused ? "fused · custom" : "synapse local"}
             </text>
             <AnimatePresence>
@@ -159,6 +165,17 @@ export function NeuralMap({ s, onPulseDone }: { s: ConsoleState; onPulseDone: (i
       ))}
       {s.busy && <motion.circle cx={C.x + 92} cy={C.y} r={4} fill="#ffb089" style={{ transformOrigin: `${C.x}px ${C.y}px` }} filter="url(#glow)"
         animate={{ rotate: 360 }} transition={{ duration: 2.2, repeat: Infinity, ease: "linear" }} />}
+      {s.busy && Array.from({ length: 14 }, (_, i) => (
+        <motion.g key={"in" + i} style={{ transformOrigin: `${C.x}px ${C.y}px` }} initial={{ rotate: i * 25.7 }} animate={{ rotate: i * 25.7 + 140 }}
+          transition={{ duration: 1.8, repeat: Infinity, ease: "easeIn", delay: (i % 7) * 0.26 }}>
+          <motion.circle cy={C.y} r={2.4} fill="#ffb089" initial={{ cx: C.x + 190, opacity: 0 }} animate={{ cx: [C.x + 190, C.x + 50], opacity: [0, 1, 0] }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: "easeIn", delay: (i % 7) * 0.26 }} />
+        </motion.g>
+      ))}
+      {s.busy && [0, 0.6, 1.2].map((d) => (
+        <motion.circle key={"wave" + d} cx={C.x} cy={C.y} fill="none" stroke="#ff7a45" strokeWidth={1.5}
+          initial={{ r: 48, opacity: 0.7 }} animate={{ r: 150, opacity: 0 }} transition={{ duration: 1.8, repeat: Infinity, delay: d, ease: "easeOut" }} />
+      ))}
       {/* agent core */}
       <motion.circle cx={C.x} cy={C.y} r={70} fill="url(#core)" filter="url(#glow)"
         animate={{ opacity: s.busy ? [0.25, 0.55, 0.25] : [0.18, 0.3, 0.18], r: s.busy ? [66, 80, 66] : [66, 72, 66] }}
@@ -197,7 +214,7 @@ function Spark({ x, y, color }: { x: number; y: number; color: string }) {
 }
 
 /** A white signal that travels to the endpoint and back along the grafted link. */
-function PulseDot({ id, pathId, onDone }: { id: number; pathId: string; onDone: (id: number) => void }) {
+function PulseDot({ id, pathId, onDone, color = "#fff" }: { id: number; pathId: string; onDone: (id: number) => void; color?: string }) {
   const ref = useRef<SVGCircleElement>(null);
   useEffect(() => {
     const path = document.getElementById(pathId) as SVGPathElement | null;
@@ -214,5 +231,5 @@ function PulseDot({ id, pathId, onDone }: { id: number; pathId: string; onDone: 
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
   }, [id, pathId, onDone]);
-  return <circle ref={ref} r={5} fill="#fff" filter="url(#glow)" cx={-20} cy={-20} />;
+  return <circle ref={ref} r={5} fill={color} filter="url(#glow)" cx={-20} cy={-20} />;
 }

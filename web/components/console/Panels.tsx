@@ -6,8 +6,10 @@ import { approve } from "@/lib/api";
 import type { Approval, ConsoleState, Line, Phase, Toast, Tone } from "@/lib/useConsole";
 
 export const TONE: Record<Tone, string> = {
-  violet: "#ff7a45", live: "#8fd18a", read: "#7d95ff", write: "#f2c14e", drift: "#ffd166", danger: "#ff6b57", muted: "#a39887",
+  violet: "var(--color-violet)", live: "var(--color-live)", read: "var(--color-read)", write: "var(--color-write)",
+  drift: "var(--color-drift)", danger: "var(--color-danger)", muted: "var(--color-muted)",
 };
+const alpha = (c: string, pct: number) => `color-mix(in srgb, ${c} ${pct}%, transparent)`;
 const PHASE_TONE: Record<Phase, Tone> = {
   offline: "danger", idle: "live", thinking: "violet", searching: "read", building: "violet", calling: "read",
   approval: "write", pruning: "muted", fusing: "violet", sentinel: "drift", done: "live", error: "danger",
@@ -19,11 +21,11 @@ export function StatusIsland({ phase, status }: { phase: Phase; status: string }
   const busy = !["idle", "done", "offline", "error"].includes(phase);
   return (
     <motion.div layout transition={{ type: "spring", stiffness: 380, damping: 32 }}
-      className="flex items-center gap-3 overflow-hidden rounded-full border bg-[#120f0b]/90 px-4 py-2 shadow-[0_10px_40px_rgba(0,0,0,.5)] backdrop-blur"
-      style={{ borderColor: c + "55" }}>
+      className="flex items-center gap-3 overflow-hidden rounded-full border bg-panel/90 px-4 py-2 shadow-[0_10px_40px_rgba(0,0,0,.5)] backdrop-blur"
+      style={{ borderColor: alpha(c, 33) }}>
       <motion.span layout className="relative flex h-2.5 w-2.5 shrink-0">
         {busy && <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-70" style={{ background: c }} />}
-        <span className="relative inline-flex h-2.5 w-2.5 rounded-full" style={{ background: c, boxShadow: `0 0 10px ${c}` }} />
+        <span className="relative inline-flex h-2.5 w-2.5 rounded-full" style={{ background: c, boxShadow: `0 0 10px ${alpha(c, 80)}` }} />
       </motion.span>
       <AnimatePresence mode="popLayout" initial={false}>
         <motion.span key={status} layout initial={{ y: 14, opacity: 0, filter: "blur(4px)" }} animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
@@ -87,14 +89,15 @@ export function AnswerCard({ s }: { s: ConsoleState }) {
     <AnimatePresence mode="wait">
       {s.question && (
         <motion.div key={s.question} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-          className={`relative overflow-hidden rounded-2xl border border-white/8 bg-black/25 p-4 ${s.busy ? "border-flow" : ""}`} data-active={s.busy} data-testid="answer" aria-live="polite">
-          <p className="flex items-center gap-2 text-[12px] font-semibold text-text"><span aria-hidden className="flex h-6 w-6 items-center justify-center rounded-full bg-[radial-gradient(circle,#ffb089,#e8551f)] text-[11px]">✦</span>Agent&apos;s answer</p>
+          className={`relative pl-7 ${s.busy ? "" : ""}`} data-testid="answer" aria-live="polite">
+          <span className="absolute top-0 left-0 font-display text-[22px] leading-none font-semibold text-live italic">A.</span>
+          <p className="font-mono text-[10px] tracking-[0.22em] text-muted uppercase">{s.busy && !s.answer ? "writing…" : "the agent's answer"}</p>
           {!s.answer && s.busy && (
             <div className="mt-3 space-y-2">
               {[92, 78, 85].map((w, i) => <div key={i} className="shimmer h-3 rounded bg-panel" style={{ width: `${w}%` }} />)}
             </div>
           )}
-          <div className="mt-2 space-y-1.5 text-[13.5px] leading-relaxed text-text/85 [&_.cite]:ml-1 [&_.cite]:rounded [&_.cite]:bg-live/10 [&_.cite]:px-1 [&_.cite]:font-mono [&_.cite]:text-[10.5px] [&_.cite]:text-live">
+          <div className="mt-2 space-y-1.5 text-[13.5px] leading-relaxed text-text/85 [overflow-wrap:anywhere] [&_.cite]:ml-1 [&_.cite]:inline-block [&_.cite]:max-w-full [&_.cite]:truncate [&_.cite]:align-middle [&_.cite]:rounded [&_.cite]:bg-live/10 [&_.cite]:px-1 [&_.cite]:font-mono [&_.cite]:text-[10.5px] [&_.cite]:text-live">
             {blocks.map((b, i) => (
               <motion.div key={i} initial={{ opacity: 0, y: 6, filter: "blur(4px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                 transition={{ delay: i * 0.07, duration: 0.35 }}
@@ -118,7 +121,7 @@ export function Timeline({ lines }: { lines: Line[] }) {
             transition={{ type: "spring", stiffness: 420, damping: 34 }} className="flex gap-2.5 overflow-hidden py-0.5">
             <span className="w-4 shrink-0 text-center font-mono text-xs" style={{ color: TONE[l.tone] }}>{l.icon}</span>
             <div className="min-w-0">
-              <p className="truncate font-mono text-[12px]" style={{ color: l.tone === "muted" ? "#a39887" : "#f1eadc" }}>{l.text}</p>
+              <p className="truncate font-mono text-[12px]" style={{ color: l.tone === "muted" ? "var(--color-muted)" : "var(--color-text)" }}>{l.text}</p>
               {l.detail && <p className="truncate font-mono text-[10.5px] text-muted">{l.detail}</p>}
             </div>
           </motion.div>
@@ -153,7 +156,7 @@ export function ApprovalSheet({ approvals }: { approvals: Approval[] }) {
               <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={() => approve(a.id, false)}
                 className="rounded-xl border border-line px-4 py-2 text-sm text-muted hover:text-text">Decline</motion.button>
               <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={() => approve(a.id, true)}
-                className="rounded-xl bg-write px-5 py-2 text-sm font-semibold text-[#2a1800]">Approve</motion.button>
+                className="rounded-xl bg-write px-5 py-2 text-sm font-semibold text-ink">Approve</motion.button>
             </div>
           </motion.div>
         </motion.div>
@@ -178,7 +181,7 @@ function ToastItem({ t, dismiss }: { t: Toast; dismiss: (id: number) => void }) 
   return (
     <motion.div layout initial={{ opacity: 0, x: 60, scale: 0.9 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0, x: 60 }}
       transition={{ type: "spring", stiffness: 320, damping: 26 }}
-      className="pointer-events-auto overflow-hidden rounded-2xl border bg-panel/95 p-4 backdrop-blur" style={{ borderColor: c + "66", boxShadow: `0 0 40px ${c}22` }}>
+      className="pointer-events-auto overflow-hidden rounded-2xl border bg-panel/95 p-4 backdrop-blur" style={{ borderColor: alpha(c, 40), boxShadow: `0 0 40px ${alpha(c, 13)}` }}>
       <p className="text-sm font-semibold" style={{ color: c }}>{t.title}</p>
       <p className="mt-1 font-mono text-[11.5px] text-muted">{t.body}</p>
       <motion.div className="mt-3 h-0.5 origin-left rounded" style={{ background: c }} initial={{ scaleX: 1 }} animate={{ scaleX: 0 }} transition={{ duration: 6, ease: "linear" }} />
